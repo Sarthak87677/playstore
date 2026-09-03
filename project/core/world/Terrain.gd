@@ -37,6 +37,7 @@ func build(p_size: Vector2, p_res: int, p_height_fn: Callable,
 	var verts := PackedVector3Array(); verts.resize(vcount)
 	var norms := PackedVector3Array(); norms.resize(vcount)
 	var uvs := PackedVector2Array(); uvs.resize(vcount)
+	var tans := PackedFloat32Array(); tans.resize(vcount * 4)
 	var idx := PackedInt32Array(); idx.resize(resolution * resolution * 6)
 
 	for j in _rows:
@@ -59,6 +60,13 @@ func build(p_size: Vector2, p_res: int, p_height_fn: Callable,
 			var hu := _heights[mini(j + 1, _rows - 1) * _cols + i]
 			norms[k] = Vector3((hl - hr) * step.y * 2.0, 2.0 * step.x * step.y,
 				(hd - hu) * step.x * 2.0).normalized()
+			# Tangent along +X of the heightfield. Without tangents the terrain
+			# shader's normal map has no basis to work in and lighting collapses.
+			var tan := Vector3(2.0 * step.x, hr - hl, 0.0).normalized()
+			tans[k * 4 + 0] = tan.x
+			tans[k * 4 + 1] = tan.y
+			tans[k * 4 + 2] = tan.z
+			tans[k * 4 + 3] = 1.0
 
 	var w := 0
 	for j in resolution:
@@ -67,8 +75,11 @@ func build(p_size: Vector2, p_res: int, p_height_fn: Callable,
 			var b := a + 1
 			var c := a + _cols
 			var d := c + 1
-			idx[w] = a; idx[w + 1] = c; idx[w + 2] = d
-			idx[w + 3] = a; idx[w + 4] = d; idx[w + 5] = b
+			# Godot treats clockwise-wound triangles as front-facing. The obvious
+			# ordering here is the wrong way round and the whole ground gets
+			# back-face culled, leaving props apparently floating in the sky.
+			idx[w] = a; idx[w + 1] = d; idx[w + 2] = c
+			idx[w + 3] = a; idx[w + 4] = b; idx[w + 5] = d
 			w += 6
 
 	var arrays := []
@@ -76,6 +87,7 @@ func build(p_size: Vector2, p_res: int, p_height_fn: Callable,
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	arrays[Mesh.ARRAY_NORMAL] = norms
 	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_TANGENT] = tans
 	arrays[Mesh.ARRAY_INDEX] = idx
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)

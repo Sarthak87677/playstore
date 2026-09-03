@@ -116,18 +116,27 @@ func build_palettes() -> Array:
 	var ruin: Color = info.get("sky_ruin", Color(0.4, 0.42, 0.48))
 	var bloom: Color = info.get("sky_bloom", Color(0.5, 0.8, 0.6))
 	return [
-		Atmosphere.palette(mem.darkened(0.25), mem, mem.lightened(0.12),
-			Color(1.0, 0.97, 0.92), 2.0, 0.0035, 0.014,
-			{"saturation": 0.94, "contrast": 1.0, "glow": 0.55, "exposure": 1.05,
-			 "sun_pitch": -52.0, "sun_yaw": 30.0, "fill_energy": 0.30}),
-		Atmosphere.palette(ruin.darkened(0.35), ruin, ruin.lightened(0.05),
-			Color(0.92, 0.88, 0.84), 1.15, 0.012, 0.030,
-			{"saturation": 0.82, "contrast": 1.08, "glow": 0.34, "exposure": 0.94,
-			 "sun_pitch": -34.0, "sun_yaw": 62.0, "fill_energy": 0.16}),
-		Atmosphere.palette(bloom.darkened(0.3), bloom, bloom.lightened(0.1),
-			Color(1.0, 0.98, 0.90), 1.7, 0.0065, 0.022,
-			{"saturation": 1.12, "contrast": 1.04, "glow": 0.62, "exposure": 1.0,
-			 "sun_pitch": -44.0, "sun_yaw": 18.0, "fill_energy": 0.26}),
+		# MEMORY - clean, high, slightly cool. Long sightlines, crisp shadows.
+		Atmosphere.palette(mem.darkened(0.42), mem, mem.lightened(0.06),
+			Color(1.0, 0.97, 0.90), 2.6, 0.0010, 0.0045,
+			{"saturation": 0.96, "contrast": 1.06, "glow": 0.5, "exposure": 1.0,
+			 "sun_pitch": -54.0, "sun_yaw": 28.0, "fill_energy": 0.26,
+			 "ambient": 0.80, "fog_begin": 70.0, "fog_end": 900.0, "sky_energy": 0.95,
+			 "fog_aerial": 0.05}),
+		# RUIN - heavy, desaturated, low sun. Air you can see.
+		Atmosphere.palette(ruin.darkened(0.5), ruin, ruin.lightened(0.02),
+			Color(0.94, 0.89, 0.83), 1.5, 0.0022, 0.0090,
+			{"saturation": 0.80, "contrast": 1.14, "glow": 0.30, "exposure": 0.95,
+			 "sun_pitch": -30.0, "sun_yaw": 64.0, "fill_energy": 0.14,
+			 "ambient": 0.62, "fog_begin": 34.0, "fog_end": 560.0, "sky_energy": 0.7,
+			 "fog_aerial": 0.10}),
+		# BLOOM - warm, saturated, dappled. Mid fog for depth between canopies.
+		Atmosphere.palette(bloom.darkened(0.44), bloom, bloom.lightened(0.05),
+			Color(1.0, 0.98, 0.88), 2.2, 0.0016, 0.0070,
+			{"saturation": 1.16, "contrast": 1.08, "glow": 0.55, "exposure": 1.0,
+			 "sun_pitch": -48.0, "sun_yaw": 16.0, "fill_energy": 0.24,
+			 "ambient": 0.78, "fog_begin": 50.0, "fog_end": 700.0, "sky_energy": 0.9,
+			 "fog_aerial": 0.07}),
 	]
 
 func configure_audio() -> void:
@@ -591,6 +600,15 @@ func is_finished() -> bool:
 	return _finished
 
 # ================================================================ helpers
+## Build the chapter's terrain with the biome-appropriate layered material.
+func build_terrain(size: Vector2, res: int, height_fn: Callable,
+		biome: String = "", surface: int = Veil.Surface.STONE) -> Terrain:
+	var b := biome if biome != "" else String(info.get("biome", "valley"))
+	terrain = Terrain.new()
+	add_child(terrain)
+	terrain.build(size, res, height_fn, ProcAssets.terrain_material(b), surface)
+	return terrain
+
 func ground_y(x: float, z: float, fallback: float = 0.0) -> float:
 	if terrain:
 		return terrain.height_at(x, z)
@@ -615,6 +633,14 @@ func veg_sampler(max_slope: float = 26.0, exclusions: Array = [],
 			if r.has_point(Vector2(x, z)):
 				return null
 		return Vector3(x, y - 0.05, z)
+
+## Vantage points for the rendered capture pass. Chapters override this to
+## point the camera at their own set pieces.
+func shot_spots() -> Array:
+	var p := spawn_position
+	return [
+		{"name": "spawn", "pos": p + Vector3(9, 6, 9), "look": p + Vector3(0, 1.4, 0)},
+	]
 
 func challenge_failed() -> void:
 	GameState.run["challenge_failed"] = true

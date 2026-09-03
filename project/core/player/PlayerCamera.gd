@@ -53,14 +53,16 @@ func _apply_camera_attributes() -> void:
 	camera.fov = Settings.fov
 	var att := CameraAttributesPractical.new()
 	att.auto_exposure_enabled = true
-	att.auto_exposure_min_sensitivity = 12.0
-	att.auto_exposure_max_sensitivity = 640.0
-	att.auto_exposure_speed = 1.2
-	att.auto_exposure_scale = 0.42
+	# A narrow sensitivity band: enough adaptation to sell going indoors,
+	# not so much that the scene washes out on a bright sky.
+	att.auto_exposure_min_sensitivity = 90.0
+	att.auto_exposure_max_sensitivity = 400.0
+	att.auto_exposure_speed = 0.55
+	att.auto_exposure_scale = 0.52
 	att.dof_blur_far_enabled = Settings.preset_data().get("dof", false)
-	att.dof_blur_far_distance = 34.0
-	att.dof_blur_far_transition = 22.0
-	att.dof_blur_amount = 0.06
+	att.dof_blur_far_distance = 120.0
+	att.dof_blur_far_transition = 60.0
+	att.dof_blur_amount = 0.035
 	camera.attributes = att
 
 func set_target(t: Node3D) -> void:

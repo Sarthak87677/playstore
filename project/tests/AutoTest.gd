@@ -31,6 +31,11 @@ func run(p_chapters: Array, p_shots: bool, p_quick: bool) -> void:
 	if quick:
 		await _memidle(int(chapters[0]) - 1)
 		return
+	if shots and not ("play" in Log.skip):
+		for c in chapters:
+			await _shotwalk(int(c) - 1)
+		get_tree().quit(0)
+		return
 	print("      %s (boot)" % _mem())
 	await _test_settings()
 	print("      %s (after settings)" % _mem())
@@ -93,6 +98,7 @@ func _wait(sec: float) -> void:
 func _shot(tag: String) -> void:
 	if not shots or DisplayServer.get_name() == "headless":
 		return
+	await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	_shot_i += 1
@@ -308,6 +314,57 @@ func _memidle(idx: int) -> void:
 			i, Log.rss_mb(), get_tree().get_node_count(),
 			OS.get_static_memory_usage() / 1048576.0, ProcAudio.cache_size()])
 	get_tree().quit(0)
+
+## Rendered capture pass: load a chapter, fly a camera to a few vantage points
+## and photograph each reality state. Used to eyeball the art direction.
+func _shotwalk(idx: int) -> void:
+	DirAccess.make_dir_recursive_absolute(shot_dir)
+	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	await SceneFlow.start_chapter(idx, "new")
+	var game := get_tree().current_scene
+	var ch: ChapterBase = game.chapter
+	var pl: Player = game.player
+	pl.device.unlock_all()
+	pl.set_input_enabled(false)
+	# The capture pass parks the player somewhere safe and flies a free camera;
+	# without this the weather or a fall would kill them mid-shot and the frame
+	# would be captured through the death fade.
+	pl.invulnerable = true
+	pl.set_cutscene(true)
+	if game.hud:
+		game.hud.set_hud_visible(false)
+	var cam := Camera3D.new()
+	cam.fov = 62.0
+	cam.far = 900.0
+	ch.add_child(cam)
+	cam.current = true
+	cam.attributes = game.cam.camera.attributes
+	if "nofog" in Log.skip:
+		var e := ch.atmosphere.environment
+		e.fog_enabled = false
+		e.volumetric_fog_enabled = false
+		e.sdfgi_enabled = false
+		print("fog and sdfgi disabled for capture")
+
+	if ch.terrain:
+		var mi := ch.terrain.mesh_instance
+		print("terrain: visible=%s surfaces=%d aabb=%s mat=%s" % [
+			mi.visible, mi.mesh.get_surface_count(), str(mi.get_aabb()),
+			str(mi.material_override)])
+	var spots: Array = ch.shot_spots()
+	spots.append({"name": "eye", "pos": ch.spawn_position + Vector3(2.5, 1.7, 7.0),
+		"look": ch.spawn_position + Vector3(0, 1.4, -16.0)})
+	for si in spots.size():
+		var spot: Dictionary = spots[si]
+		cam.global_position = spot.pos
+		cam.look_at(spot.look, Vector3.UP)
+		for st in (spot.states if spot.has("states") else [0, 1, 2]):
+			ch.manager.set_base_state(int(st))
+			ch.atmosphere.force_state(int(st))
+			await _wait(0.8)
+			await _shot("ch%02d_%s_%s" % [idx + 1, String(spot.name),
+				Veil.STATE_SHORT[int(st)].to_lower()])
+	print("captured %d frames" % _shot_i)
 
 # ================================================================ chapter tests
 func _test_chapter(idx: int) -> void:

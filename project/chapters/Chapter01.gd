@@ -19,10 +19,11 @@ var _flags := {"bridge": false, "door": false, "plate": false, "conduit": false,
 # ---------------------------------------------------------------- terrain
 func _h(x: float, z: float) -> float:
 	var n := _noise
-	var valley: float = pow(minf(absf(x) / 62.0, 1.6), 2.0) * 30.0
-	var rise: float = -z * 0.055
-	var detail: float = n.get_noise_2d(x * 0.6, z * 0.6) * 3.2 \
-		+ n.get_noise_2d(x * 2.4, z * 2.4) * 0.9
+	var valley: float = pow(minf(absf(x) / 78.0, 1.5), 2.2) * 26.0
+	var rise: float = -z * 0.045
+	var detail: float = n.get_noise_2d(x * 0.35, z * 0.35) * 5.0 \
+		+ n.get_noise_2d(x * 1.1, z * 1.1) * 1.8 \
+		+ n.get_noise_2d(x * 3.3, z * 3.3) * 0.5
 	var y: float = valley + rise + detail
 
 	# The fissure the first bridge crosses.
@@ -35,8 +36,9 @@ func _h(x: float, z: float) -> float:
 		var d: float = Vector2(x - pad.x, z - pad.y).length()
 		var w: float = float(pad.z)
 		if d < w:
-			var k: float = smoothstep(w, w * 0.45, d)
-			y = lerpf(y, float(pad.w), k)
+			# Wide, eased falloff: a hard pad edge reads as folded paper.
+			var k: float = smoothstep(w, w * 0.30, d)
+			y = lerpf(y, float(pad.w), k * k * (3.0 - 2.0 * k))
 	return y
 
 var _noise := FastNoiseLite.new()
@@ -64,10 +66,7 @@ func build_world() -> void:
 	]
 
 	SceneFlow.report(0.16, "Cutting the valley")
-	terrain = Terrain.new()
-	add_child(terrain)
-	terrain.build(Vector2(280, 280), 130, Callable(self, "_h"),
-		ProcAssets.mat("rock"), Veil.Surface.STONE)
+	build_terrain(Vector2(280, 280), 154, Callable(self, "_h"), "valley")
 	spawn_position = on_ground(0, 64, 1.2)
 	await get_tree().process_frame
 
@@ -117,12 +116,12 @@ func _build_scenery() -> void:
 			continue
 		rock(on_ground(x, z, -0.3), rng.randf_range(0.8, 4.2), 700 + i)
 	for i in 46:
-		var x := rng.randf_range(-110, 110)
+		var x := rng.randf_range(-100, 100)
 		var z := rng.randf_range(-120, 110)
-		if absf(x) < 22.0:
+		if absf(x) < 22.0 or terrain.slope_at(x, z) > 30.0:
 			continue
-		var m := ProcAssets.crystal_mesh(200 + i, rng.randf_range(1.6, 5.5),
-			rng.randf_range(0.3, 0.9), 5)
+		var m := ProcAssets.crystal_mesh(200 + i, rng.randf_range(1.0, 2.8),
+			rng.randf_range(0.25, 0.6), 5)
 		static_mesh(m, "glass_broken", on_ground(x, z, -0.4),
 			Vector3(rng.randf_range(-0.2, 0.2), rng.randf_range(0, TAU), rng.randf_range(-0.2, 0.2)),
 			Vector3.ONE, Veil.Surface.GLASS)
@@ -725,6 +724,14 @@ func load_flags(flags: Dictionary) -> void:
 		player.device.unlock_all()
 	if bool(_flags.get("door", false)) and _door_gate:
 		_door_gate.open()
+
+func shot_spots() -> Array:
+	return [
+		{"name": "valley", "pos": on_ground(26, 46, 16.0), "look": Vector3(0, 4, -10)},
+		{"name": "bridge", "pos": Vector3(22, _h(0, 27) + 9.0, 30.0),
+			"look": Vector3(0, _h(0, 18) + 1.0, 16.0)},
+		{"name": "relay", "pos": on_ground(24, -62, 12.0), "look": on_ground(0, -80, 12.0)},
+	]
 
 func fragment_text(idx: int) -> String:
 	match idx:

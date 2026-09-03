@@ -146,7 +146,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 	match name:
 		# ---------------------------------------------------------- stone / rock
 		"rock":
-			var m := _base(Color(0.42, 0.41, 0.39), 0.88, 0.0)
+			var m := _base(Color(0.52, 0.50, 0.47), 0.88, 0.0)
 			m.albedo_texture = noise_tex("rock_a", 11, 0.009, [
 				[0.0, Color(0.20, 0.19, 0.18)], [0.42, Color(0.40, 0.39, 0.37)],
 				[0.72, Color(0.55, 0.53, 0.50)], [1.0, Color(0.66, 0.64, 0.60)]], 5)
@@ -226,7 +226,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 
 		# ---------------------------------------------------------- built
 		"concrete":
-			var m := _base(Color(0.55, 0.55, 0.53), 0.86, 0.0)
+			var m := _base(Color(0.66, 0.66, 0.63), 0.86, 0.0)
 			m.albedo_texture = noise_tex("conc_a", 81, 0.015, [
 				[0.0, Color(0.38, 0.38, 0.37)], [0.45, Color(0.55, 0.55, 0.53)],
 				[0.8, Color(0.64, 0.64, 0.62)], [1.0, Color(0.70, 0.70, 0.67)]], 4)
@@ -238,7 +238,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			return _tri(m, 0.24)
 		"concrete_aged":
 			var m := mat("concrete").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.40, 0.40, 0.38)
+			m.albedo_color = Color(0.52, 0.52, 0.49)
 			m.roughness = 0.95
 			return m
 		"metal":
@@ -252,7 +252,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 				[0.0, Color(0.22, 0.22, 0.22)], [1.0, Color(0.72, 0.72, 0.72)]], 3)
 			return _tri(m, 0.3)
 		"metal_rust":
-			var m := _base(Color(0.40, 0.25, 0.16), 0.82, 0.45)
+			var m := _base(Color(0.52, 0.33, 0.21), 0.82, 0.45)
 			m.albedo_texture = noise_tex("rust_a", 101, 0.022, [
 				[0.0, Color(0.20, 0.13, 0.09)], [0.35, Color(0.42, 0.24, 0.13)],
 				[0.7, Color(0.58, 0.34, 0.18)], [1.0, Color(0.36, 0.30, 0.27)]], 5)
@@ -260,7 +260,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("rust_a", 101, 0.05, 6.0, 4)
 			return _tri(m, 0.34)
 		"metal_dark":
-			var m := _base(Color(0.16, 0.17, 0.19), 0.38, 0.95)
+			var m := _base(Color(0.24, 0.25, 0.28), 0.38, 0.95)
 			m.albedo_texture = noise_tex("mdark_a", 111, 0.025, [
 				[0.0, Color(0.09, 0.10, 0.11)], [1.0, Color(0.24, 0.25, 0.28)]], 3)
 			m.normal_enabled = true
@@ -288,7 +288,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("glassb", 131, 0.08, 9.0, 4)
 			return m
 		"wood":
-			var m := _base(Color(0.34, 0.24, 0.15), 0.88, 0.0)
+			var m := _base(Color(0.45, 0.32, 0.20), 0.88, 0.0)
 			m.albedo_texture = noise_tex("wood_a", 141, 0.006, [
 				[0.0, Color(0.20, 0.13, 0.08)], [0.45, Color(0.34, 0.23, 0.14)],
 				[1.0, Color(0.48, 0.34, 0.20)]], 3, TEX_SIZE,
@@ -297,7 +297,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("wood_a", 141, 0.02, 5.0, 3)
 			return _tri(m, 0.35)
 		"bark":
-			var m := _base(Color(0.26, 0.21, 0.16), 0.95, 0.0)
+			var m := _base(Color(0.35, 0.28, 0.21), 0.95, 0.0)
 			m.albedo_texture = noise_tex("bark_a", 151, 0.012, [
 				[0.0, Color(0.12, 0.10, 0.08)], [0.4, Color(0.25, 0.20, 0.15)],
 				[0.8, Color(0.36, 0.29, 0.21)], [1.0, Color(0.44, 0.37, 0.28)]], 5,
@@ -914,6 +914,105 @@ func box_mesh(size: Vector3, uv_scale: float = 1.0) -> Mesh:
 
 func sphere_mesh(radius: float, rings: int = 12, segs: int = 18) -> Mesh:
 	return rock_mesh(0, radius, 0.0, rings, segs, 1.0)
+
+# ============================================================ terrain materials
+## Multi-layer triplanar terrain surfaces, one per biome. Each is a ShaderMaterial
+## fed by the same procedural noise textures the object materials use.
+const TERRAIN_PRESETS := {
+	"valley": {"ground": "grass", "slope": "cliff", "peak": "rock",
+		"gt": Color(0.31, 0.38, 0.19), "st": Color(0.42, 0.40, 0.35),
+		"pt": Color(0.46, 0.46, 0.47), "peak_start": 36.0, "peak_end": 62.0, "uv": 0.26},
+	"forest": {"ground": "moss", "slope": "cliff", "peak": "rock",
+		"gt": Color(0.25, 0.35, 0.16), "st": Color(0.38, 0.37, 0.32),
+		"pt": Color(0.45, 0.47, 0.42), "peak_start": 40.0, "peak_end": 70.0, "uv": 0.28},
+	"city": {"ground": "concrete", "slope": "concrete_aged", "peak": "tile",
+		"gt": Color(0.56, 0.57, 0.58), "st": Color(0.46, 0.47, 0.49),
+		"pt": Color(0.68, 0.70, 0.74), "peak_start": 26.0, "peak_end": 48.0, "uv": 0.20},
+	"mountain": {"ground": "snow", "slope": "cliff", "peak": "snow",
+		"gt": Color(0.80, 0.84, 0.90), "st": Color(0.34, 0.35, 0.38),
+		"pt": Color(0.90, 0.93, 0.98), "peak_start": 16.0, "peak_end": 34.0, "uv": 0.22},
+	"desert": {"ground": "sand", "slope": "rock", "peak": "rock",
+		"gt": Color(0.82, 0.70, 0.48), "st": Color(0.62, 0.53, 0.40),
+		"pt": Color(0.70, 0.61, 0.46), "peak_start": 28.0, "peak_end": 52.0, "uv": 0.24},
+	"islands": {"ground": "sand", "slope": "rock_wet", "peak": "grass",
+		"gt": Color(0.78, 0.71, 0.55), "st": Color(0.42, 0.44, 0.44),
+		"pt": Color(0.36, 0.47, 0.29), "peak_start": 12.0, "peak_end": 26.0, "uv": 0.26},
+	"archive": {"ground": "tile", "slope": "concrete", "peak": "concrete",
+		"gt": Color(0.62, 0.64, 0.67), "st": Color(0.48, 0.49, 0.52),
+		"pt": Color(0.56, 0.58, 0.61), "peak_start": 30.0, "peak_end": 60.0, "uv": 0.18},
+	"core": {"ground": "metal_dark", "slope": "rock_dark", "peak": "brass",
+		"gt": Color(0.34, 0.35, 0.38), "st": Color(0.28, 0.29, 0.32),
+		"pt": Color(0.56, 0.47, 0.28), "peak_start": 24.0, "peak_end": 48.0, "uv": 0.22},
+}
+
+func terrain_material(preset: String) -> ShaderMaterial:
+	var key := "terrain_" + preset
+	if _mat.has(key):
+		return _mat[key]
+	var d: Dictionary = TERRAIN_PRESETS.get(preset, TERRAIN_PRESETS.valley)
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/terrain.gdshader")
+	m.set_shader_parameter("tex_ground", _detail_of(String(d.ground), 0))
+	m.set_shader_parameter("tex_slope", _detail_of(String(d.slope), 1))
+	m.set_shader_parameter("tex_peak", _detail_of(String(d.peak), 2))
+	m.set_shader_parameter("nrm_ground", _terrain_normal_of(String(d.ground), 0))
+	m.set_shader_parameter("nrm_slope", _terrain_normal_of(String(d.slope), 1))
+	m.set_shader_parameter("macro_tex", noise_tex("macro", 909, 0.004,
+		[[0.0, Color.BLACK], [1.0, Color.WHITE]], 4, TEX_SIZE))
+	m.set_shader_parameter("ground_tint", Color(d.gt))
+	m.set_shader_parameter("slope_tint", Color(d.st))
+	m.set_shader_parameter("peak_tint", Color(d.pt))
+	m.set_shader_parameter("uv_scale", float(d.uv))
+	m.set_shader_parameter("peak_start", float(d.peak_start))
+	m.set_shader_parameter("peak_end", float(d.peak_end))
+	m.set_shader_parameter("macro_scale", 0.0075)
+	m.set_shader_parameter("macro_strength", 0.42)
+	m.set_shader_parameter("normal_depth", 0.40)
+	m.set_shader_parameter("detail_scale", 0.9)
+	_mat[key] = m
+	return m
+
+## Greyscale detail for the terrain shader. The layer tints carry the colour, so
+## the detail map has to stay achromatic - multiplying an already-coloured albedo
+## by a tint darkens the surface twice and the ground reads as near-black.
+const DETAIL_SHAPES := {
+	"grass":         [0.014, 4, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"moss":          [0.018, 4, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"sand":          [0.020, 3, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"snow":          [0.012, 3, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"cliff":         [0.010, 5, FastNoiseLite.TYPE_SIMPLEX, FastNoiseLite.FRACTAL_RIDGED],
+	"rock":          [0.012, 4, FastNoiseLite.TYPE_SIMPLEX, FastNoiseLite.FRACTAL_FBM],
+	"rock_dark":     [0.012, 4, FastNoiseLite.TYPE_SIMPLEX, FastNoiseLite.FRACTAL_FBM],
+	"rock_wet":      [0.014, 4, FastNoiseLite.TYPE_SIMPLEX, FastNoiseLite.FRACTAL_FBM],
+	"concrete":      [0.009, 3, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"concrete_aged": [0.011, 4, FastNoiseLite.TYPE_SIMPLEX, FastNoiseLite.FRACTAL_RIDGED],
+	"tile":          [0.020, 3, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"metal_dark":    [0.016, 3, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+	"brass":         [0.016, 3, FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM],
+}
+
+func _detail_of(name: String, slot: int) -> Texture2D:
+	var d: Array = DETAIL_SHAPES.get(name, [0.04, 4,
+		FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM])
+	return noise_tex("detail_%s" % name, 4400 + slot * 17, float(d[0]),
+		[[0.0, Color(0.46, 0.46, 0.46)], [0.45, Color(0.80, 0.80, 0.80)],
+		 [0.78, Color(1.02, 1.02, 1.02)], [1.0, Color(1.18, 1.18, 1.18)]],
+		int(d[1]), TEX_SIZE, int(d[2]), int(d[3]))
+
+## Terrain normals must be far gentler than object normals: three triplanar
+## projections of a strong bump map fight each other and shade the ground into
+## a mottled mess of near-black and near-white patches.
+func _terrain_normal_of(name: String, slot: int) -> Texture2D:
+	var d: Array = DETAIL_SHAPES.get(name, [0.04, 4,
+		FastNoiseLite.TYPE_SIMPLEX_SMOOTH, FastNoiseLite.FRACTAL_FBM])
+	return normal_tex("tnrm_%s" % name, 5500 + slot * 13, float(d[0]) * 2.2,
+		2.2, mini(int(d[1]), 4), TEX_SIZE, int(d[2]))
+
+func _normal_of(name: String) -> Texture2D:
+	var sm := mat(name)
+	if sm.normal_texture != null:
+		return sm.normal_texture
+	return normal_tex("fallback_n_" + name, 2, 0.05, 3.0, 3, TEX_SIZE_SMALL)
 
 func clear_cache() -> void:
 	_mesh.clear()

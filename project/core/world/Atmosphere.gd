@@ -29,9 +29,10 @@ func setup(p_presets: Array, initial_state: int, tod: float = 0.42) -> void:
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 1.0
+	env.ambient_light_energy = 0.85
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_white = 6.0
+	env.tonemap_white = 4.0
 	env.tonemap_exposure = 1.0
 	environment = env
 
@@ -97,17 +98,25 @@ func _apply(p: Dictionary, instant: bool) -> void:
 	_sky_mat.sky_energy_multiplier = float(p.get("sky_energy", 1.0))
 
 	env.fog_enabled = true
+	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_light_color = p.get("fog", Color(0.6, 0.65, 0.7))
-	env.fog_density = float(p.get("fog_density", 0.006))
-	env.fog_sky_affect = float(p.get("fog_sky", 0.35))
-	env.fog_aerial_perspective = 0.28
+	env.fog_light_energy = float(p.get("fog_energy", 0.9))
+	env.fog_density = float(p.get("fog_density", 0.0022))
+	env.fog_sky_affect = float(p.get("fog_sky", 0.12))
+	env.fog_aerial_perspective = float(p.get("fog_aerial", 0.14))
+	env.fog_depth_begin = float(p.get("fog_begin", 22.0))
+	env.fog_depth_end = float(p.get("fog_end", 640.0))
+	env.fog_depth_curve = 1.35
+	env.ambient_light_energy = float(p.get("ambient", 0.85))
 
 	env.volumetric_fog_density = float(p.get("vol_density", 0.02))
 	env.volumetric_fog_albedo = p.get("vol_color", Color(0.8, 0.85, 0.9))
 	env.volumetric_fog_emission = p.get("vol_emission", Color(0, 0, 0))
 	env.volumetric_fog_emission_energy = float(p.get("vol_emission_energy", 0.0))
-	env.volumetric_fog_length = 90.0
-	env.volumetric_fog_gi_inject = 1.0
+	env.volumetric_fog_length = 110.0
+	env.volumetric_fog_gi_inject = 0.85
+	env.volumetric_fog_anisotropy = 0.25
+	env.volumetric_fog_detail_spread = 2.4
 
 	env.adjustment_enabled = true
 	env.adjustment_brightness = float(p.get("brightness", 1.0)) * Settings.brightness
@@ -115,10 +124,12 @@ func _apply(p: Dictionary, instant: bool) -> void:
 	env.adjustment_saturation = float(p.get("saturation", 1.0))
 	env.tonemap_exposure = float(p.get("exposure", 1.0))
 
-	env.glow_intensity = float(p.get("glow", 0.5))
-	env.glow_bloom = float(p.get("bloom", 0.06))
-	env.glow_hdr_threshold = 1.15
-	env.glow_strength = 0.9
+	env.glow_intensity = float(p.get("glow", 0.42))
+	env.glow_bloom = float(p.get("bloom", 0.04))
+	env.glow_hdr_threshold = 1.35
+	env.glow_hdr_scale = 2.0
+	env.glow_strength = 0.85
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 
 	env.ssao_radius = 1.6
 	env.ssao_intensity = float(p.get("ssao", 1.5))
@@ -161,13 +172,15 @@ func _apply_quality() -> void:
 static func palette(sky_top: Color, sky_horizon: Color, fog: Color, sun_color: Color,
 		sun_energy: float, fog_density: float, vol: float, extra: Dictionary = {}) -> Dictionary:
 	var d := {
-		"sky_top": sky_top, "sky_horizon": sky_horizon, "ground": fog.darkened(0.6),
+		"sky_top": sky_top, "sky_horizon": sky_horizon, "ground": fog.darkened(0.7),
 		"fog": fog, "fog_density": fog_density, "vol_density": vol,
 		"vol_color": fog.lightened(0.1), "sun_color": sun_color, "sun_energy": sun_energy,
-		"fill_color": sky_top.lightened(0.15), "fill_energy": 0.22,
-		"brightness": 1.0, "contrast": 1.03, "saturation": 1.0, "exposure": 1.0,
-		"glow": 0.42, "bloom": 0.05, "ssao": 1.5, "sun_pitch": -46.0, "sun_yaw": 42.0,
-		"sun_size": 8.0, "sun_softness": 0.6, "sky_energy": 1.0, "fog_sky": 0.35,
+		"fill_color": sky_top.lightened(0.15), "fill_energy": 0.20,
+		"brightness": 1.0, "contrast": 1.09, "saturation": 1.02, "exposure": 1.0,
+		"glow": 0.40, "bloom": 0.04, "ssao": 1.8, "sun_pitch": -46.0, "sun_yaw": 42.0,
+		"sun_size": 6.0, "sun_softness": 0.5, "sky_energy": 0.85, "fog_sky": 0.12,
+		"fog_aerial": 0.14, "fog_begin": 22.0, "fog_end": 640.0, "fog_energy": 0.9,
+		"ambient": 0.85,
 	}
 	d.merge(extra, true)
 	return d
