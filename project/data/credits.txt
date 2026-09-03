@@ -1,0 +1,34 @@
+# VEILFORGE: THE THREEFOLD EARTH
+
+An original single-player game.
+Fully offline. No accounts, no servers, no telemetry, no advertisements,
+no microtransactions, no loot boxes.
+
+# DESIGN AND DEVELOPMENT
+
+Game design, systems design, level design
+Programming, technical art, UI and sound design
+Built with Claude Code
+
+# ENGINE
+
+Godot Engine 4.3 (MIT License)
+Copyright (c) 2014-present Godot Engine contributors
+Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur
+https://godotengine.org
+
+# ASSETS
+
+Every mesh, texture, material, sound effect, ambience bed and musical
+instrument in this game is generated procedurally at runtime from noise
+functions, oscillators and mathematics. No third-party art or audio
+libraries are redistributed with this build.
+
+See THIRD_PARTY_LICENSES.md in the game folder for full details.
+
+# SPECIAL NOTE
+
+The Fracture, the Veilforge Device, MOTE, and every location, character
+and piece of lore in this game are original works created for it.
+
+Thank you for playing.

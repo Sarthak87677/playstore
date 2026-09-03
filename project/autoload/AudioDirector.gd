@@ -114,13 +114,31 @@ func _play_stream(s: AudioStream, volume_db: float, pitch: float, bus: String) -
 	p.pitch_scale = clampf(pitch, 0.05, 4.0)
 	p.play()
 
-## Positional one-shot at a world point (creates a short-lived 3D player).
-func play_3d(name: String, world: Node, pos: Vector3, volume_db: float = 0.0,
+## Frees a one-shot player when it finishes. Some audio drivers - including the
+## silent fallback used on machines with no output device - never emit
+## `finished`, so a Timer parented to the player guarantees cleanup. The timer
+## dies with the node, so nothing here can outlive what it refers to.
+func _arm_autofree(p: Node, s: AudioStream) -> void:
+	p.finished.connect(p.queue_free)
+	var life := 4.0
+	if s is AudioStreamWAV:
+		var wav := s as AudioStreamWAV
+		life = maxf(0.5, float(wav.data.size()) * 0.5
+			/ maxf(float(wav.mix_rate), 1.0)) + 0.6
+	var t := Timer.new()
+	t.wait_time = life
+	t.one_shot = true
+	t.autostart = true
+	p.add_child(t)
+	t.timeout.connect(p.queue_free)
+
+## Positional one-shot from an already-built stream.
+func play_stream_3d(s: AudioStream, world: Node, pos: Vector3, volume_db: float = 0.0,
 		pitch: float = 1.0, max_dist: float = 40.0) -> void:
-	if world == null or not world.is_inside_tree():
+	if world == null or not world.is_inside_tree() or s == null:
 		return
 	var p := AudioStreamPlayer3D.new()
-	p.stream = ProcAudio.sfx(name)
+	p.stream = s
 	p.bus = "SFX"
 	p.volume_db = volume_db
 	p.pitch_scale = clampf(pitch, 0.05, 4.0)
@@ -130,7 +148,26 @@ func play_3d(name: String, world: Node, pos: Vector3, volume_db: float = 0.0,
 	world.add_child(p)
 	p.global_position = pos
 	p.play()
-	p.finished.connect(func() -> void: p.queue_free())
+	_arm_autofree(p, s)
+
+## Positional one-shot at a world point (creates a short-lived 3D player).
+func play_3d(name: String, world: Node, pos: Vector3, volume_db: float = 0.0,
+		pitch: float = 1.0, max_dist: float = 40.0) -> void:
+	if world == null or not world.is_inside_tree():
+		return
+	var s: AudioStream = ProcAudio.sfx(name)
+	var p := AudioStreamPlayer3D.new()
+	p.stream = s
+	p.bus = "SFX"
+	p.volume_db = volume_db
+	p.pitch_scale = clampf(pitch, 0.05, 4.0)
+	p.max_distance = max_dist
+	p.unit_size = 6.0
+	p.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_SQUARE_DISTANCE
+	world.add_child(p)
+	p.global_position = pos
+	p.play()
+	_arm_autofree(p, s)
 
 # ================================================================ ambience
 func set_ambience(profiles: Array, volumes: Array = []) -> void:
@@ -231,7 +268,7 @@ func _on_beat() -> void:
 		_phrase = (_phrase + 1) % 4
 		var deg: int = [0, 5, 3, 4][_phrase]
 		_play_music(ProcAudio.pad(_scale_note(deg, -1) + off, 4.6,
-			0.25 + 0.35 * intensity), -13.0)
+			snappedf(0.25 + 0.35 * intensity, 0.2)), -13.0)
 		if state_tint != Veil.State.RUIN:
 			_play_music(ProcAudio.pad(_scale_note(deg + 2, -1) + off, 4.6, 0.2), -18.0)
 

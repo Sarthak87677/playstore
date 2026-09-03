@@ -64,6 +64,12 @@ static func midi_hz(note: float) -> float:
 ## Warm sine/triangle stack with slow attack. The harmonic bed of every chapter.
 func pad(note: float, dur: float = 3.0, bright: float = 0.35,
 		detune: float = 0.16) -> AudioStreamWAV:
+	# Callers pass continuously varying expression values; quantising here keeps
+	# the buffer cache bounded instead of growing without limit during play.
+	note = snappedf(note, 1.0)
+	dur = snappedf(dur, 0.2)
+	bright = snappedf(clampf(bright, 0.0, 1.0), 0.2)
+	detune = snappedf(detune, 0.05)
 	var key := "pad_%.2f_%.2f_%.2f_%.2f" % [note, dur, bright, detune]
 	if _cache.has(key): return _cache[key]
 	var n := int(RATE * dur)
@@ -86,6 +92,9 @@ func pad(note: float, dur: float = 3.0, bright: float = 0.35,
 
 ## Plucked string via a damped Karplus-Strong loop. Bright, decays fast.
 func pluck(note: float, dur: float = 1.6, damp: float = 0.495) -> AudioStreamWAV:
+	note = snappedf(note, 1.0)
+	dur = snappedf(dur, 0.2)
+	damp = snappedf(damp, 0.005)
 	var key := "plk_%.2f_%.2f_%.3f" % [note, dur, damp]
 	if _cache.has(key): return _cache[key]
 	var n := int(RATE * dur)
@@ -110,6 +119,9 @@ func pluck(note: float, dur: float = 1.6, damp: float = 0.495) -> AudioStreamWAV
 
 ## Two-operator FM bell. Used for discovery stings and Memory-state melody.
 func bell(note: float, dur: float = 2.4, index: float = 3.2, ratio: float = 2.01) -> AudioStreamWAV:
+	note = snappedf(note, 1.0)
+	dur = snappedf(dur, 0.2)
+	index = snappedf(index, 0.2)
 	var key := "bel_%.2f_%.2f_%.2f_%.2f" % [note, dur, index, ratio]
 	if _cache.has(key): return _cache[key]
 	var n := int(RATE * dur)
@@ -130,6 +142,8 @@ func bell(note: float, dur: float = 2.4, index: float = 3.2, ratio: float = 2.01
 
 ## Deep sub-bass swell for Ruin-state weight and impacts.
 func sub(note: float, dur: float = 2.0) -> AudioStreamWAV:
+	note = snappedf(note, 1.0)
+	dur = snappedf(dur, 0.2)
 	var key := "sub_%.2f_%.2f" % [note, dur]
 	if _cache.has(key): return _cache[key]
 	var n := int(RATE * dur)

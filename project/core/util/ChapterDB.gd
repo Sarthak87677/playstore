@@ -11,7 +11,7 @@ const CHAPTERS := [
 		"subtitle": "Where the sky came down in sheets",
 		"builder": "res://chapters/Chapter01.gd",
 		"objective": "Recover the Veilforge Device and reach the valley relay.",
-		"target_time": 780.0, "par_scans": 12, "puzzles": 5,
+		"target_time": 780.0, "par_scans": 12, "puzzles": 6,
 		"fragments": ["Rainfall Log 04", "Surveyor's Bootprint", "Unsent Letter"],
 		"component": "Field Coil Alpha",
 		"challenge": "Cross the valley without letting a single glass shard strike you.",

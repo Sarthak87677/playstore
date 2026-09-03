@@ -479,8 +479,30 @@ func _commit(st: SurfaceTool, smooth: bool = false) -> ArrayMesh:
 	if smooth:
 		st.generate_normals()
 	st.generate_tangents()
+	st.index()
 	st.optimize_indices_for_cache()
 	return st.commit()
+
+# ---------------------------------------------------------------- shape cache
+var _shapes: Dictionary = {}
+
+## Collision shapes are expensive to build and are shared by every instance of
+## a cached mesh, so they are cached alongside the meshes themselves.
+func trimesh_shape(m: Mesh) -> Shape3D:
+	var key := "t%d" % m.get_instance_id()
+	if _shapes.has(key):
+		return _shapes[key]
+	var s := m.create_trimesh_shape()
+	_shapes[key] = s
+	return s
+
+func convex_shape(m: Mesh) -> Shape3D:
+	var key := "c%d" % m.get_instance_id()
+	if _shapes.has(key):
+		return _shapes[key]
+	var s := m.create_convex_shape(true, true)
+	_shapes[key] = s
+	return s
 
 func _cached(key: String, fn: Callable) -> Mesh:
 	if _mesh.has(key):

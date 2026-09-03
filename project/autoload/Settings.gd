@@ -181,7 +181,11 @@ func _event_from_dict(d: Dictionary) -> InputEvent:
 func event_display_name(d: Dictionary) -> String:
 	match String(d.get("type", "")):
 		"key":
-			return OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(int(d.code)))
+			# Physical-to-label mapping needs a real display server.
+			if DisplayServer.get_name() == "headless":
+				return OS.get_keycode_string(int(d.code))
+			return OS.get_keycode_string(
+				DisplayServer.keyboard_get_keycode_from_physical(int(d.code)))
 		"mouse":
 			match int(d.button):
 				MOUSE_BUTTON_LEFT: return "Mouse Left"

@@ -106,6 +106,13 @@ func write(slot: int, data: Dictionary) -> bool:
 		if FileAccess.file_exists(bak_path(slot)):
 			dir.remove(bak_path(slot).get_file())
 		dir.rename(path(slot).get_file(), bak_path(slot).get_file())
+	elif not FileAccess.file_exists(bak_path(slot)):
+		# First write for this slot: seed the backup so a later corruption of
+		# the primary still has something valid to fall back to.
+		var seed_f := FileAccess.open(bak_path(slot), FileAccess.WRITE)
+		if seed_f:
+			seed_f.store_string(text)
+			seed_f.close()
 	var e := dir.rename(tmp_path(slot).get_file(), path(slot).get_file())
 	if e != OK:
 		Log.err("Save slot %d: rename failed (%d)" % [slot, e])
@@ -151,9 +158,8 @@ func _sanitise(d: Dictionary) -> Dictionary:
 		if not d.has(k):
 			d[k] = base[k]
 	# Chapter records must all exist with the right shape.
-	var chs: Dictionary = d.get("chapters", {})
-	if not (chs is Dictionary):
-		chs = {}
+	var raw_chs: Variant = d.get("chapters", {})
+	var chs: Dictionary = raw_chs if raw_chs is Dictionary else {}
 	for c in ChapterDB.CHAPTERS:
 		var rec: Variant = chs.get(c.id, null)
 		if not (rec is Dictionary):
