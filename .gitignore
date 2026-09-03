@@ -1,0 +1,14 @@
+# Godot
+project/.godot/
+project/.import/
+project/android/
+*.translation
+
+# Build intermediates
+build/
+release/**/logs/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
