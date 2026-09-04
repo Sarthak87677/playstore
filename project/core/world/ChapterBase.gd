@@ -190,11 +190,14 @@ func static_mesh(mesh: Mesh, mat: Variant, pos: Vector3,
 	sb.rotation = rot
 	sb.scale = scale
 	sb.set_meta("surface", surface)
+	if mesh == null:
+		Log.warn("static_mesh called with a null mesh (material '%s')" % str(mat))
+		return sb
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = _mat(mat)
 	sb.add_child(mi)
-	if collision:
+	if collision and mesh.get_surface_count() > 0:
 		var cs := CollisionShape3D.new()
 		cs.shape = ProcAssets.convex_shape(mesh) if convex else ProcAssets.trimesh_shape(mesh)
 		sb.add_child(cs)
@@ -226,6 +229,8 @@ func box(size: Vector3, mat: Variant, pos: Vector3, rot: Vector3 = Vector3.ZERO,
 func decor(mesh: Mesh, mat: Variant, pos: Vector3, rot: Vector3 = Vector3.ZERO,
 		scale: Vector3 = Vector3.ONE, parent: Node = null,
 		shadows: bool = true) -> MeshInstance3D:
+	if mesh == null:
+		Log.warn("decor called with a null mesh (material '%s')" % str(mat))
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = _mat(mat)
@@ -357,7 +362,7 @@ func variant_mesh(mesh: Mesh, mat: Variant, pos: Vector3 = Vector3.ZERO,
 	mi.mesh = mesh
 	mi.material_override = _mat(mat)
 	sb.add_child(mi)
-	if collision:
+	if collision and mesh.get_surface_count() > 0:
 		var cs := CollisionShape3D.new()
 		cs.shape = ProcAssets.trimesh_shape(mesh)
 		sb.add_child(cs)
@@ -515,10 +520,7 @@ func guardian(pos: Vector3, patrol: Array = [], yaw: float = 0.0,
 	g.position = pos
 	g.home_yaw = yaw
 	g.start_state = start_state
-	var pts: Array[Vector3] = []
-	for p in patrol:
-		pts.append(p as Vector3)
-	g.patrol_points = pts
+	g.patrol_points = patrol.duplicate()
 	(parent if parent else self).add_child(g)
 	return g
 

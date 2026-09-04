@@ -5,7 +5,7 @@ class_name MovingPlatform
 
 signal arrived(index: int)
 
-@export var points: Array[Vector3] = []
+@export var points: Array = []
 @export var speed: float = 2.2
 @export var wait_time: float = 1.4
 @export var size: Vector3 = Vector3(3.0, 0.3, 3.0)
@@ -34,7 +34,7 @@ func _ready() -> void:
 	add_child(cs)
 	running = auto_run
 	if points.size() > 0:
-		global_position = points[0]
+		global_position = points[0] as Vector3
 
 func _physics_process(dt: float) -> void:
 	if not running or points.size() < 2:
@@ -42,7 +42,7 @@ func _physics_process(dt: float) -> void:
 	if _wait > 0.0:
 		_wait -= dt
 		return
-	var goal := points[_i]
+	var goal: Vector3 = points[_i]
 	var to := goal - global_position
 	if to.length() < speed * dt * 1.2:
 		global_position = goal

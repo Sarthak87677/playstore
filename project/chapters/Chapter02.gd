@@ -544,6 +544,10 @@ func _build_lock() -> void:
 		Veil.Prop.LUMINOUS, Veil.State.BLOOM, 3.0)
 	sc.xp_bonus = 90
 
+	_lock.hint_subtle = "Three sockets, three different appetites."
+	_lock.hint_guided = "Each socket takes one property, and they must all be held at once."
+	_lock.hint_directed = "Record Rigid, Growing and Luminous, then imprint one into each socket before the first lapses."
+	_lock.register_hints()
 	_lock.solved.connect(func(_p: bool) -> void:
 		_flags.lock = true
 		say("Three tones held. The canopy stair is open.", "MOTE", 4.0))

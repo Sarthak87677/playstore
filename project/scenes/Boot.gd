@@ -30,7 +30,15 @@ func _start_autotest(args: PackedStringArray) -> void:
 			for part in a.substr(11).split(","):
 				if String(part).strip_edges() != "":
 					chapters.append(int(part))
-	var t: AutoTest = load("res://tests/AutoTest.gd").new()
+	var script: GDScript = load("res://tests/AutoTest.gd")
+	if script == null:
+		# The harness is excluded from release exports; the flag simply does
+		# nothing there rather than reaching a debug tool from a shipped build.
+		Log.warn("Autotest harness is not present in this build.")
+		_build()
+		_run()
+		return
+	var t: AutoTest = script.new()
 	# Parented to an autoload so changing scenes does not free the harness.
 	SceneFlow.add_child(t)
 	t.run(chapters, shots, quick)

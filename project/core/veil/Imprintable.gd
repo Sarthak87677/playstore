@@ -8,7 +8,7 @@ signal imprinted(prop: int)
 signal imprint_rejected(prop: int)
 signal imprint_cleared()
 
-@export var accepted: Array[int] = []
+@export var accepted: Array = []
 @export var label: String = "Receptive surface"
 @export var hold_seconds: float = 0.0     # 0 = permanent
 @export var one_shot: bool = false

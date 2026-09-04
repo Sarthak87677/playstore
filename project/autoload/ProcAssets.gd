@@ -508,6 +508,12 @@ func _cached(key: String, fn: Callable) -> Mesh:
 	if _mesh.has(key):
 		return _mesh[key]
 	var m: Mesh = fn.call()
+	if m == null:
+		# SurfaceTool.commit() returns null for a surface with no triangles.
+		# Hand back an empty ArrayMesh instead so a degenerate parameter set
+		# cannot propagate a null into MeshInstance3D or the collision builder.
+		Log.warn("ProcAssets: generator produced no geometry for '%s'" % key)
+		m = ArrayMesh.new()
 	_mesh[key] = m
 	return m
 

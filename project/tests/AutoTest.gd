@@ -368,7 +368,8 @@ func _shotwalk(idx: int) -> void:
 
 # ================================================================ chapter tests
 func _test_chapter(idx: int) -> void:
-	print("\n-- chapter %d: %s --" % [idx + 1, ChapterDB.title(idx)])
+	print("\n-- chapter %d: %s -- (t=%.1fs)" % [idx + 1, ChapterDB.title(idx),
+		Time.get_ticks_msec() / 1000.0])
 	GameState.start_new_game(2, Veil.Difficulty.FIELD)
 	var t0 := Time.get_ticks_msec()
 	await SceneFlow.start_chapter(idx, "new")
@@ -403,6 +404,7 @@ func _test_chapter(idx: int) -> void:
 	check("scannable objects present", scans >= 3, "%d" % scans)
 	check("checkpoints present", cps >= 2, "%d" % cps)
 	check("objective set", Hints.objective != "")
+	print("      phase: locomotion (t=%.1fs)" % (Time.get_ticks_msec() / 1000.0))
 
 	# --- physical sanity: the player must be standing on something
 	await _wait(0.7)
@@ -444,7 +446,8 @@ func _test_chapter(idx: int) -> void:
 	check("jump lifts the player", pl.global_position.y > y0 + 0.25,
 		"+%.2f m from y=%.1f" % [pl.global_position.y - y0, y0])
 	await _wait(1.6)
-	print("      %s (after locomotion)" % _mem())
+	print("      %s (after locomotion, t=%.1fs)" % [_mem(),
+		Time.get_ticks_msec() / 1000.0])
 
 	print("      %s (after movement)" % _mem())
 
@@ -552,9 +555,13 @@ func _test_chapter(idx: int) -> void:
 		if not pz.is_solved:
 			pz.mark_solved()
 		await _wait(0.05)
-	check("all puzzles report solved",
-		int(GameState.run.get("puzzles", 0)) >= solved_before + ch.puzzles.size() - 1,
-		"%d solved" % int(GameState.run.get("puzzles", 0)))
+	var unsolved := 0
+	for pz2 in ch.puzzles:
+		if not (pz2 as PuzzleBase).is_solved:
+			unsolved += 1
+	check("every puzzle can be solved", unsolved == 0,
+		"%d of %d solved, %d unsolved" % [
+			ch.puzzles.size() - unsolved, ch.puzzles.size(), unsolved])
 
 	# --- chapter can be finished and scored
 	print("      nodes %d   mem %.1f MB (post-play)" % [

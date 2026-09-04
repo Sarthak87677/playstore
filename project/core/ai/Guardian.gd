@@ -14,7 +14,7 @@ signal disabled(by: String)
 
 enum St { DORMANT, PATROL, SUSPICIOUS, ALERT, SEARCH, STUNNED, DOWN }
 
-@export var patrol_points: Array[Vector3] = []
+@export var patrol_points: Array = []
 @export var home_yaw: float = 0.0
 @export var guard_id: String = ""
 @export var start_state: int = St.PATROL
