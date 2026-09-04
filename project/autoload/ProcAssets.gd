@@ -321,18 +321,18 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("tile_a", 161, 0.05, 3.0, 3)
 			return _tri(m, 0.5)
 		"nacre":
-			var m := _base(Color(0.82, 0.86, 0.90), 0.14, 0.35)
+			var m := _base(Color(0.60, 0.64, 0.70), 0.18, 0.30)
 			m.albedo_texture = noise_tex("nacre_a", 171, 0.02, [
 				[0.0, Color(0.68, 0.76, 0.86)], [0.35, Color(0.88, 0.84, 0.92)],
 				[0.65, Color(0.80, 0.90, 0.88)], [1.0, Color(0.94, 0.92, 0.86)]], 4)
 			m.normal_enabled = true
 			m.normal_texture = normal_tex("nacre_a", 171, 0.05, 2.0, 3)
 			m.rim_enabled = true
-			m.rim = 0.6
-			m.rim_tint = 0.9
+			m.rim = 0.35
+			m.rim_tint = 0.7
 			m.clearcoat_enabled = true
-			m.clearcoat = 0.8
-			m.clearcoat_roughness = 0.1
+			m.clearcoat = 0.5
+			m.clearcoat_roughness = 0.16
 			return _tri(m, 0.34)
 
 		# ---------------------------------------------------------- organic
@@ -350,8 +350,8 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			var m := mat("foliage").duplicate() as StandardMaterial3D
 			m.albedo_color = Color(0.30, 0.60, 0.26)
 			m.emission_enabled = true
-			m.emission = Color(0.10, 0.34, 0.16)
-			m.emission_energy_multiplier = 0.35
+			m.emission = Color(0.08, 0.24, 0.12)
+			m.emission_energy_multiplier = 0.10
 			return m
 		"foliage_dry":
 			var m := mat("foliage").duplicate() as StandardMaterial3D
@@ -935,14 +935,14 @@ const TERRAIN_PRESETS := {
 		"gt": Color(0.56, 0.57, 0.58), "st": Color(0.46, 0.47, 0.49),
 		"pt": Color(0.68, 0.70, 0.74), "peak_start": 26.0, "peak_end": 48.0, "uv": 0.20},
 	"mountain": {"ground": "snow", "slope": "cliff", "peak": "snow",
-		"gt": Color(0.80, 0.84, 0.90), "st": Color(0.34, 0.35, 0.38),
-		"pt": Color(0.90, 0.93, 0.98), "peak_start": 16.0, "peak_end": 34.0, "uv": 0.22},
+		"gt": Color(0.70, 0.75, 0.82), "st": Color(0.32, 0.33, 0.36),
+		"pt": Color(0.80, 0.84, 0.90), "peak_start": 16.0, "peak_end": 34.0, "uv": 0.22},
 	"desert": {"ground": "sand", "slope": "rock", "peak": "rock",
-		"gt": Color(0.82, 0.70, 0.48), "st": Color(0.62, 0.53, 0.40),
-		"pt": Color(0.70, 0.61, 0.46), "peak_start": 28.0, "peak_end": 52.0, "uv": 0.24},
+		"gt": Color(0.68, 0.58, 0.39), "st": Color(0.52, 0.45, 0.34),
+		"pt": Color(0.58, 0.51, 0.38), "peak_start": 28.0, "peak_end": 52.0, "uv": 0.24},
 	"islands": {"ground": "sand", "slope": "rock_wet", "peak": "grass",
-		"gt": Color(0.78, 0.71, 0.55), "st": Color(0.42, 0.44, 0.44),
-		"pt": Color(0.36, 0.47, 0.29), "peak_start": 12.0, "peak_end": 26.0, "uv": 0.26},
+		"gt": Color(0.58, 0.52, 0.39), "st": Color(0.36, 0.38, 0.38),
+		"pt": Color(0.30, 0.40, 0.24), "peak_start": 12.0, "peak_end": 26.0, "uv": 0.26},
 	"archive": {"ground": "tile", "slope": "concrete", "peak": "concrete",
 		"gt": Color(0.62, 0.64, 0.67), "st": Color(0.48, 0.49, 0.52),
 		"pt": Color(0.56, 0.58, 0.61), "peak_start": 30.0, "peak_end": 60.0, "uv": 0.18},

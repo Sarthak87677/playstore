@@ -122,7 +122,7 @@ const CHAPTERS := [
 		"challenge": "Complete the final sequence without dropping below 25% shield.",
 		"challenge_id": "unbroken",
 		"weather": "convergence", "biome": "core",
-		"sky_memory": Color(0.90, 0.86, 0.78), "sky_ruin": Color(0.40, 0.24, 0.24),
+		"sky_memory": Color(0.90, 0.86, 0.78), "sky_ruin": Color(0.38, 0.30, 0.30),
 		"sky_bloom": Color(0.58, 0.92, 0.62),
 	},
 ]

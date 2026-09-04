@@ -1,13 +1,15 @@
 # Godot
 project/.godot/
 project/.import/
-project/android/
 *.translation
 
-# Build intermediates
+# Build intermediates (regenerate with tools/build_windows.sh)
 build/
-release/**/logs/
 *.tmp
+
+# The loose 85 MB executable is not committed; the distributable ZIP in
+# release/ contains it, and tools/build_windows.sh reproduces both.
+release/VEILFORGE/VEILFORGE.exe
 
 # OS
 .DS_Store

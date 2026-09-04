@@ -36,7 +36,13 @@ func _h(x: float, z: float) -> float:
 		if d < r:
 			var k := smoothstep(r, 0.0, d)
 			var peak: float = [9.0, 15.0, 11.0, 12.0, 8.0][i]
-			y = maxf(y, lerpf(-12.0, peak, pow(k, 1.35)))
+			# Break the cone with noise, then flatten a building pad on top so
+			# structures are not perched on a curve.
+			var shore := n.get_noise_2d(x * 0.9, z * 0.9) * 3.4 * (1.0 - k)
+			var h := lerpf(-12.0, peak, pow(k, 1.35)) + shore
+			var flat := smoothstep(14.0, 7.0, d)
+			h = lerpf(h, peak, flat)
+			y = maxf(y, h)
 	# A shallow bar between landfall and the lighthouse (the causeway route).
 	var bar := clampf(1.0 - Vector2(x + 26.0, z - 66.0).length() / 34.0, 0.0, 1.0)
 	y = maxf(y, lerpf(-14.0, -1.4, smoothstep(0.0, 1.0, bar)))

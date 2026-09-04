@@ -45,6 +45,7 @@ func run(p_chapters: Array, p_shots: bool, p_quick: bool) -> void:
 	print("      %s (after system tests)" % _mem())
 	for c in chapters:
 		await _test_chapter(int(c) - 1)
+	await _test_resume(int(chapters[0]) - 1)
 	_report()
 
 # ================================================================ helpers
@@ -354,11 +355,17 @@ func _shotwalk(idx: int) -> void:
 	var spots: Array = ch.shot_spots()
 	spots.append({"name": "eye", "pos": ch.spawn_position + Vector3(2.5, 1.7, 7.0),
 		"look": ch.spawn_position + Vector3(0, 1.4, -16.0)})
+	if "oneshot" in Log.skip:
+		# A single representative frame per chapter: software rendering makes the
+		# full three-state sweep of every vantage point very slow.
+		spots = [spots[0]]
+		spots[0]["states"] = [Veil.State.RUIN]
 	for si in spots.size():
 		var spot: Dictionary = spots[si]
 		cam.global_position = spot.pos
 		cam.look_at(spot.look, Vector3.UP)
-		for st in (spot.states if spot.has("states") else [0, 1, 2]):
+		var states: Array = spot.states if spot.has("states") else [0, 1, 2]
+		for st in states:
 			ch.manager.set_base_state(int(st))
 			ch.atmosphere.force_state(int(st))
 			await _wait(0.8)
@@ -578,6 +585,54 @@ func _test_chapter(idx: int) -> void:
 
 func _node_count() -> int:
 	return get_tree().get_node_count()
+
+## Close-and-resume: store a checkpoint, drop the profile as a quit would,
+## reload it from disk and re-enter the chapter from that checkpoint.
+func _test_resume(idx: int) -> void:
+	print("\n-- close and resume --")
+	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	await SceneFlow.start_chapter(idx, "new")
+	var game := get_tree().current_scene
+	var ch: ChapterBase = game.chapter
+	var pl: Player = game.player
+	if ch.checkpoints.is_empty():
+		check("chapter has a checkpoint to resume from", false)
+		return
+	var cp := ch.checkpoints[ch.checkpoints.size() - 1] as Checkpoint
+	GameState.award(1500, "resume test")
+	ch._on_checkpoint(cp.id)
+	var saved_xp := GameState.xp()
+	var saved_pos: Vector3 = cp.respawn_transform().pos
+	check("checkpoint written to disk", SaveSystem.exists(2))
+
+	# Simulate quitting: forget everything held in memory.
+	GameState.slot = -1
+	GameState.data = SaveSystem.new_profile(1)
+	GameState.reset_run(0)
+	await _wait(0.2)
+
+	check("profile reloads from disk", GameState.load_slot(2))
+	check("xp survived the restart", GameState.xp() == saved_xp,
+		"%d vs %d" % [GameState.xp(), saved_xp])
+	check("checkpoint survived the restart", GameState.has_checkpoint())
+	var cp_data: Dictionary = GameState.checkpoint()
+	check("checkpoint names the right chapter", int(cp_data.get("chapter", -1)) == idx)
+
+	await SceneFlow.start_chapter(idx, "checkpoint")
+	var game2 := get_tree().current_scene
+	var pl2: Player = game2.player
+	check("resumed into the chapter", pl2 != null and pl2.is_alive())
+	if pl2:
+		check("resumed at the checkpoint, not the start",
+			pl2.global_position.distance_to(saved_pos) < 4.0,
+			"%.1f m from checkpoint" % pl2.global_position.distance_to(saved_pos))
+	await _wait(0.6)
+	check("run stats restored", int(GameState.run.get("chapter", -1)) == idx)
+
+	# Missing save data must not break Continue.
+	SaveSystem.erase(2)
+	check("erased slot reports empty", SaveSystem.header(2).get("empty", false))
+	check("continue finds no slot to load", SaveSystem.newest_slot() != 2)
 
 func _walk(n: Node) -> Array:
 	var out: Array = [n]
