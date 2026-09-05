@@ -50,6 +50,7 @@ func _build() -> void:
 		["Upgrades", func() -> void: _open_panel("upgrades")],
 		["Field Records", func() -> void: _open_panel("records")],
 		["Settings", func() -> void: _open_panel("settings")],
+		["How to Play", func() -> void: _open_panel("howtoplay")],
 		["Save Game", func() -> void: _save_now()],
 		["Restart from Checkpoint", func() -> void: _restart()],
 		["Quit to Main Menu", func() -> void: _ask_quit()],
@@ -136,6 +137,8 @@ func _open_panel(which: String) -> void:
 			_sub = CollectiblesPanel.new()
 		"codex":
 			_sub = UpgradePanel.new()
+		"howtoplay":
+			_sub = HowToPlay.new()
 	if _sub == null:
 		return
 	# The pause list must get out of the way, or it draws on top of the panel

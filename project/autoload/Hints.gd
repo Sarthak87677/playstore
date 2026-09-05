@@ -42,6 +42,7 @@ var _context_stack: Array = []    # [{ "id":..., "lines":[subtle, guided, direct
 var _last_hint_time := 0.0
 var _idle_timer := 0.0
 var _last_progress_time := 0.0
+var _deferred: Array = []   # tutorials asked for before their ability existed
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -59,10 +60,46 @@ func is_learned(id: String) -> bool:
 func reset_tutorials() -> void:
 	GameState.data["tutorials"] = {}
 	_active.clear()
+	_deferred.clear()
 
-## Ask for a tutorial prompt. No-op if already learned or already showing.
+## Called by the Device the moment an ability becomes available, so anything the
+## world asked for too early now appears.
+func ability_unlocked(_feature: String) -> void:
+	var pending := _deferred.duplicate()
+	_deferred.clear()
+	for id in pending:
+		request(String(id))
+
+## Tutorials that teach a Device ability. Asking for one before the player can
+## actually perform it produces the worst kind of prompt: an instruction the
+## game will not let you follow. A player who walks south before picking the
+## Device up was being told to "press Mouse Left to shift everything inside the
+## field" while the objective still read "recover the Veilforge Device".
+const TUTORIAL_REQUIRES := {
+	"veil_aim": "field", "veil_shift": "field", "veil_cycle": "field",
+	"veil_pin": "pin", "scan": "scan", "imprint": "imprint", "emp": "emp",
+}
+
+func _ability_ready(id: String) -> bool:
+	if not TUTORIAL_REQUIRES.has(id):
+		return true
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return false
+	var dev = (players[0] as Node).get("device")
+	if dev == null:
+		return false
+	return bool(dev.is_unlocked(String(TUTORIAL_REQUIRES[id])))
+
+## Ask for a tutorial prompt. No-op if already learned, already showing, or if
+## the ability it teaches is still locked. A deferred request is retried when
+## the Device unlocks that ability.
 func request(id: String) -> void:
 	if not TUTORIALS.has(id) or is_learned(id) or _active.has(id):
+		return
+	if not _ability_ready(id):
+		if not _deferred.has(id):
+			_deferred.append(id)
 		return
 	var t: Dictionary = TUTORIALS[id]
 	_active[id] = {"progress": 0}

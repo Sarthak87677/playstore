@@ -56,7 +56,7 @@ func build_world() -> void:
 	]
 
 	SceneFlow.report(0.12, "Laying the dune field")
-	build_terrain(Vector2(300, 300), 150, Callable(self, "_h"), "desert",
+	build_terrain(Vector2(300, 300), 225, Callable(self, "_h"), "desert",
 		Veil.Surface.SAND)
 	spawn_position = on_ground(0, 104, 1.2)
 	await get_tree().process_frame
@@ -122,7 +122,7 @@ func _build_dressing() -> void:
 	var excl: Array = []
 	for p in _pads:
 		excl.append(Rect2(p.x - p.z * 0.8, p.y - p.z * 0.8, p.z * 1.6, p.z * 1.6))
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(61, 4, 0.7, 0.06), 2400,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(61, 12, 0.7, 0.06), 2400,
 		Rect2(-140, -140, 280, 280), veg_sampler(30.0, excl, 2.0),
 		Color(0.44, 0.40, 0.20), Color(0.62, 0.56, 0.28), Vector2(0.6, 1.6), 0.30, 51, 1.0)
 

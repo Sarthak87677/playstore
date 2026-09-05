@@ -17,6 +17,11 @@ const GOOD        := Color(0.42, 0.92, 0.58)
 const BAD         := Color(0.98, 0.42, 0.38)
 const GOLD        := Color(1.00, 0.82, 0.38)
 
+## The engine's default font, for the few places that draw text directly onto a
+## canvas rather than through a Label.
+static func font() -> Font:
+	return ThemeDB.fallback_font
+
 static func s(v: float) -> float:
 	return v * Settings.ui_scale
 

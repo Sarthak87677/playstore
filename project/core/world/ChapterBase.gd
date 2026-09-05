@@ -250,7 +250,8 @@ func decor(mesh: Mesh, mat: Variant, pos: Vector3, rot: Vector3 = Vector3.ZERO,
 func rock(pos: Vector3, size: float, seed_v: int = -1, mat: String = "rock",
 		parent: Node = null) -> StaticBody3D:
 	var s := (seed_v if seed_v >= 0 else rng.randi_range(1, 9999)) % 10
-	var m := ProcAssets.rock_mesh(s, 1.0, 0.36, 10, 14, 0.62 + 0.04 * float(s % 6))
+	# 10x14 leaves visible facets on anything bigger than a boulder.
+	var m := ProcAssets.rock_mesh(s, 1.0, 0.36, 18, 26, 0.62 + 0.04 * float(s % 6))
 	return static_mesh(m, mat, pos, Vector3(rng.randf_range(-0.2, 0.2),
 		rng.randf_range(0, TAU), rng.randf_range(-0.2, 0.2)),
 		Vector3.ONE * size, Veil.Surface.STONE, Veil.L_WORLD, true, parent, true)
@@ -261,7 +262,7 @@ func tree(pos: Vector3, height: float, radius: float, seed_v: int,
 	var root := Node3D.new()
 	root.position = pos
 	(parent if parent else self).add_child(root)
-	var trunk_m := ProcAssets.trunk_mesh(seed_v, height, radius, 0.22, 8, 8, 0.4)
+	var trunk_m := ProcAssets.trunk_mesh(seed_v, height, radius, 0.22, 12, 14, 0.4)
 	var sb := StaticBody3D.new()
 	sb.collision_layer = Veil.L_WORLD
 	sb.set_meta("surface", Veil.Surface.WOOD)
@@ -278,7 +279,7 @@ func tree(pos: Vector3, height: float, radius: float, seed_v: int,
 	sb.add_child(cs)
 	root.add_child(sb)
 	var canopy := MeshInstance3D.new()
-	canopy.mesh = ProcAssets.canopy_mesh(seed_v, radius * 7.0 * canopy_scale, 5)
+	canopy.mesh = ProcAssets.canopy_mesh(seed_v, radius * 7.0 * canopy_scale, 7, 9, 14)
 	canopy.material_override = ProcAssets.mat(leaf)
 	canopy.position.y = height * 0.94
 	root.add_child(canopy)
@@ -539,9 +540,19 @@ func prop(pos: Vector3, size: Vector3, label: String, mass: float = 45.0,
 	return p
 
 # ================================================================ direction
-func set_objective(text: String) -> void:
+## Where the current objective actually is. The HUD draws a marker on it, which
+## is the difference between "recover the Device from the skiff cradle" being an
+## instruction and being a riddle: a new player has no idea which of the shapes
+## on the horizon is a skiff cradle.
+var objective_position := Vector3.INF
+
+func set_objective(text: String, pos = null) -> void:
+	objective_position = (pos as Vector3) if pos != null else Vector3.INF
 	Hints.set_objective(text)
 	objective_set.emit(text)
+
+func has_objective_marker() -> bool:
+	return objective_position != Vector3.INF
 
 func say(text: String, speaker: String = "MOTE", duration: float = 4.0) -> void:
 	if mote:
@@ -611,7 +622,13 @@ func build_terrain(size: Vector2, res: int, height_fn: Callable,
 	var b := biome if biome != "" else String(info.get("biome", "valley"))
 	terrain = Terrain.new()
 	add_child(terrain)
-	terrain.build(size, res, height_fn, ProcAssets.terrain_material(b), surface)
+	# Terrain resolution follows the graphics preset. Chapters ask for the
+	# High-preset figure; Low trades ground detail for frame rate, Cinematic
+	# spends it. Below about a metre per cell the faceting on a slope stops
+	# being visible, which is most of what made the ground look blocky.
+	var mesh_scale := float(Settings.preset_data().get("terrain_res", 1.0))
+	var r := clampi(int(round(float(res) * mesh_scale)), 48, 512)
+	terrain.build(size, r, height_fn, ProcAssets.terrain_material(b), surface)
 	return terrain
 
 func ground_y(x: float, z: float, fallback: float = 0.0) -> float:

@@ -57,7 +57,7 @@ func build_world() -> void:
 	]
 
 	SceneFlow.report(0.12, "Carving the cirque")
-	build_terrain(Vector2(300, 300), 150, Callable(self, "_h"), "mountain",
+	build_terrain(Vector2(300, 300), 225, Callable(self, "_h"), "mountain",
 		Veil.Surface.SNOW)
 	spawn_position = on_ground(0, 96, 1.2)
 	await get_tree().process_frame
@@ -129,7 +129,7 @@ func _build_dressing() -> void:
 	var excl: Array = []
 	for p in _pads:
 		excl.append(Rect2(p.x - p.z * 0.8, p.y - p.z * 0.8, p.z * 1.6, p.z * 1.6))
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(51, 4, 0.35, 0.05), 2200,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(51, 12, 0.35, 0.05), 2200,
 		Rect2(-140, -140, 280, 280), veg_sampler(26.0, excl, -1e9, 22.0),
 		Color(0.34, 0.36, 0.30), Color(0.52, 0.54, 0.46), Vector2(0.5, 1.2), 0.26, 41, 0.6)
 

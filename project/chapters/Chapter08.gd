@@ -42,7 +42,7 @@ func build_world() -> void:
 	spawn_yaw = PI
 
 	SceneFlow.report(0.12, "Fracturing the basin")
-	build_terrain(Vector2(320, 320), 152, Callable(self, "_h"), "core",
+	build_terrain(Vector2(320, 320), 228, Callable(self, "_h"), "core",
 		Veil.Surface.METAL)
 	spawn_position = on_ground(0, 112, 1.2)
 	await get_tree().process_frame
@@ -112,7 +112,7 @@ func _build_basin() -> void:
 var _floaters: Array = []
 
 func _build_dressing() -> void:
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(81, 5, 0.8, 0.07), 3000,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(81, 15, 0.8, 0.07), 3000,
 		Rect2(-140, -150, 280, 300), veg_sampler(30.0, [], -6.0, 26.0),
 		Color(0.22, 0.32, 0.20), Color(0.44, 0.58, 0.30), Vector2(0.6, 1.8), 0.28, 71, 1.2)
 

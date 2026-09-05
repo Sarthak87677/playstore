@@ -56,7 +56,7 @@ func build_world() -> void:
 	]
 
 	SceneFlow.report(0.14, "Growing the forest floor")
-	build_terrain(Vector2(300, 300), 132, Callable(self, "_h"), "forest")
+	build_terrain(Vector2(300, 300), 198, Callable(self, "_h"), "forest")
 	spawn_position = on_ground(0, 100, 1.2)
 	await get_tree().process_frame
 
@@ -130,13 +130,13 @@ func _build_undergrowth() -> void:
 	var excl: Array = []
 	for p in _pads:
 		excl.append(Rect2(p.x - p.z * 0.8, p.y - p.z * 0.8, p.z * 1.6, p.z * 1.6))
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(11, 7, 0.85, 0.07), 6200,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(11, 21, 0.85, 0.07), 6200,
 		Rect2(-140, -140, 280, 280), veg_sampler(32.0, excl),
 		Color(0.16, 0.26, 0.12), Color(0.34, 0.46, 0.18), Vector2(0.7, 2.0), 0.22, 21, 1.3)
 	vegetation.scatter(ProcAssets.canopy_mesh(31, 0.9, 3), 900,
 		Rect2(-140, -140, 280, 280), veg_sampler(24.0, excl),
 		Color(0.14, 0.30, 0.12), Color(0.28, 0.52, 0.20), Vector2(0.6, 1.8), 0.10, 22, 1.6)
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(12, 4, 1.9, 0.10), 700,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(12, 12, 1.9, 0.10), 700,
 		Rect2(-140, -140, 280, 280), veg_sampler(20.0, excl),
 		Color(0.22, 0.34, 0.14), Color(0.46, 0.56, 0.22), Vector2(0.8, 1.6), 0.34, 23, 2.2)
 

@@ -58,7 +58,7 @@ func build_world() -> void:
 	]
 
 	SceneFlow.report(0.12, "Laying the basin")
-	build_terrain(Vector2(300, 300), 150, Callable(self, "_h"), "city")
+	build_terrain(Vector2(300, 300), 225, Callable(self, "_h"), "city")
 	spawn_position = on_ground(0, 96, 1.2)
 	await get_tree().process_frame
 
@@ -144,7 +144,7 @@ func _build_dressing() -> void:
 	var excl: Array = []
 	for p in _pads:
 		excl.append(Rect2(p.x - p.z * 0.8, p.y - p.z * 0.8, p.z * 1.6, p.z * 1.6))
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(41, 5, 0.5, 0.05), 3000,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(41, 15, 0.5, 0.05), 3000,
 		Rect2(-130, -130, 260, 260), veg_sampler(28.0, excl, 2.0),
 		Color(0.24, 0.34, 0.22), Color(0.40, 0.52, 0.30), Vector2(0.6, 1.5), 0.18, 31, 0.9)
 	vegetation.scatter(ProcAssets.canopy_mesh(42, 0.7, 3), 700,

@@ -48,10 +48,19 @@ func run(p_chapters: Array, p_shots: bool, p_quick: bool) -> void:
 	for c in chapters:
 		await _test_chapter(int(c) - 1)
 	await _test_resume(int(chapters[0]) - 1)
+	await _test_how_to_play()
 	await _test_pause_menu(int(chapters[0]) - 1)
 	_report()
 
 # ================================================================ helpers
+## A fresh profile, with the first-run How to Play card already marked seen.
+## The card pauses the game and takes input, which is exactly what a player
+## wants and exactly what a harness driving movement does not. It is exercised
+## on its own in _test_how_to_play().
+func _new_game() -> void:
+	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	GameState.data["seen_how_to_play"] = true
+
 func check(name: String, cond: bool, detail: String = "") -> bool:
 	checks += 1
 	if not cond:
@@ -218,7 +227,7 @@ func _test_saves() -> void:
 
 func _test_progression() -> void:
 	print("\n-- progression --")
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	check("new profile at level 1", GameState.level() == 1)
 	check("no points at start", GameState.points_total() == 0)
 	GameState.award(Veil.xp_for_level(10), "test")
@@ -306,7 +315,7 @@ func _test_audio() -> void:
 ## --quick: load a chapter, idle, and report real RSS each second. Used with
 ## --skip=... to bisect which subsystem is responsible for memory growth.
 func _memidle(idx: int) -> void:
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	await SceneFlow.start_chapter(idx, "new")
 	print("skips: %s  max_fps=%d" % [str(Log.skip), Engine.max_fps])
 	if "uncapped" in Log.skip:
@@ -357,7 +366,7 @@ func _shoot_front_end() -> void:
 	await _shot("ui_settings")
 	menu._close()
 	await _wait(0.3)
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	GameState.award(Veil.xp_for_level(12), "capture")
 	GameState.data.components = 5
 	await SceneFlow.start_chapter(0, "new")
@@ -379,7 +388,7 @@ func _shoot_front_end() -> void:
 ## and photograph each reality state. Used to eyeball the art direction.
 func _shotwalk(idx: int) -> void:
 	DirAccess.make_dir_recursive_absolute(shot_dir)
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	await SceneFlow.start_chapter(idx, "new")
 	var game := get_tree().current_scene
 	var ch: ChapterBase = game.chapter
@@ -436,7 +445,7 @@ func _shotwalk(idx: int) -> void:
 func _test_chapter(idx: int) -> void:
 	print("\n-- chapter %d: %s -- (t=%.1fs)" % [idx + 1, ChapterDB.title(idx),
 		Time.get_ticks_msec() / 1000.0])
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	var t0 := Time.get_ticks_msec()
 	await SceneFlow.start_chapter(idx, "new")
 	var load_ms := Time.get_ticks_msec() - t0
@@ -754,10 +763,44 @@ func _all_buttons_connected(root: Node) -> bool:
 				ok = false
 	return ok
 
+## The first-run How to Play card: it must appear on a brand-new game, hold the
+## game paused while it is up, and hand control back when dismissed.
+func _test_how_to_play() -> void:
+	print("\n-- how to play --")
+	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	GameState.data["seen_how_to_play"] = false
+	await SceneFlow.start_chapter(0, "new")
+	var game := get_tree().current_scene
+	await _wait(0.6)
+	var card: Node = null
+	for n in _walk(game):
+		if n.get_class() == "Control" and n.get_script() != null \
+				and String(n.get_script().resource_path).ends_with("HowToPlay.gd"):
+			card = n
+			break
+	if not check("how-to-play card appears on a new game", card != null):
+		return
+	check("it holds the game paused", SceneFlow.is_paused())
+	check("it lists the real bindings",
+		_panel_is_laid_out(card as Control) and _control_text(card).find("Shift everything") >= 0,
+		"%d chars of text" % _control_text(card).length())
+	card.emit_signal("closed")
+	await _wait(0.5)
+	check("dismissing it resumes play", not SceneFlow.is_paused())
+	check("it is marked seen so it does not come back",
+		bool(GameState.data.get("seen_how_to_play", false)))
+
+func _control_text(root: Node) -> String:
+	var out := ""
+	for n in _walk(root):
+		if n is Label:
+			out += (n as Label).text + " "
+	return out
+
 ## The pause menu and every screen reachable from it.
 func _test_pause_menu(idx: int) -> void:
 	print("\n-- pause menu --")
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	await SceneFlow.start_chapter(idx, "new")
 	var game := get_tree().current_scene
 	game.toggle_pause()
@@ -765,7 +808,7 @@ func _test_pause_menu(idx: int) -> void:
 	check("pause stops the game", SceneFlow.is_paused())
 	check("pause menu opened", game.pause_menu != null and game.pause_menu._open)
 	check("pause menu buttons are connected", _all_buttons_connected(game.pause_menu))
-	for panel in ["upgrades", "records", "settings"]:
+	for panel in ["upgrades", "records", "settings", "howtoplay"]:
 		game.pause_menu._open_panel(panel)
 		await _wait(0.3)
 		var ok: bool = game.pause_menu._sub != null and is_instance_valid(game.pause_menu._sub)
@@ -785,7 +828,7 @@ func _test_pause_menu(idx: int) -> void:
 ## reload it from disk and re-enter the chapter from that checkpoint.
 func _test_resume(idx: int) -> void:
 	print("\n-- close and resume --")
-	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	_new_game()
 	await SceneFlow.start_chapter(idx, "new")
 	var game := get_tree().current_scene
 	var ch: ChapterBase = game.chapter

@@ -20,24 +20,28 @@ const PRESET_DATA := [
 		"scale3d": 0.75, "msaa": 0, "ssaa": 0, "shadow_size": 2048, "shadow_quality": 0,
 		"sdfgi": false, "ssao": false, "ssil": false, "ssr": false, "volumetric": false,
 		"fog": true, "glow": false, "dof": false, "veg_density": 0.35, "veg_dist": 55.0,
+		"terrain_res": 0.70,
 		"particles": 0.35, "lod_bias": 2.4, "decals": false, "reflection_probes": false,
 	},
 	{   # MEDIUM
 		"scale3d": 0.85, "msaa": 1, "ssaa": 1, "shadow_size": 3072, "shadow_quality": 1,
 		"sdfgi": false, "ssao": true, "ssil": false, "ssr": false, "volumetric": true,
 		"fog": true, "glow": true, "dof": false, "veg_density": 0.6, "veg_dist": 85.0,
+		"terrain_res": 0.85,
 		"particles": 0.65, "lod_bias": 1.6, "decals": true, "reflection_probes": true,
 	},
 	{   # HIGH
 		"scale3d": 1.0, "msaa": 1, "ssaa": 1, "shadow_size": 4096, "shadow_quality": 3,
 		"sdfgi": true, "ssao": true, "ssil": false, "ssr": true, "volumetric": true,
 		"fog": true, "glow": true, "dof": true, "veg_density": 1.0, "veg_dist": 130.0,
+		"terrain_res": 1.0,
 		"particles": 1.0, "lod_bias": 1.0, "decals": true, "reflection_probes": true,
 	},
 	{   # CINEMATIC
 		"scale3d": 1.0, "msaa": 2, "ssaa": 1, "shadow_size": 8192, "shadow_quality": 4,
 		"sdfgi": true, "ssao": true, "ssil": true, "ssr": true, "volumetric": true,
 		"fog": true, "glow": true, "dof": true, "veg_density": 1.45, "veg_dist": 190.0,
+		"terrain_res": 1.25,
 		"particles": 1.4, "lod_bias": 0.7, "decals": true, "reflection_probes": true,
 	},
 ]

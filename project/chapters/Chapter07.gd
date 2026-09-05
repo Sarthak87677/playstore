@@ -32,7 +32,7 @@ func build_world() -> void:
 	spawn_yaw = PI
 
 	SceneFlow.report(0.12, "Levelling the plateau")
-	build_terrain(Vector2(300, 300), 120, Callable(self, "_h"), "archive",
+	build_terrain(Vector2(300, 300), 180, Callable(self, "_h"), "archive",
 		Veil.Surface.STONE)
 	spawn_position = on_ground(0, 104, 1.2)
 	await get_tree().process_frame

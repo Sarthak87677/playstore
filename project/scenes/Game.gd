@@ -101,6 +101,12 @@ func begin(index: int, mode: String) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	GameState.begin_run()
 	chapter.begin_play(mode)
+	# A first-time player gets the controls in front of them once, before the
+	# world starts asking anything of them. Reachable from Pause afterwards.
+	if index == 0 and mode == "new" and not bool(GameState.data.get("seen_how_to_play", false)) \
+			and not Log.skipping("hud"):
+		GameState.data["seen_how_to_play"] = true
+		_show_how_to_play()
 	Log.info("Chapter %d started (%s), %d veil subjects" % [
 		index + 1, mode, chapter.manager.subject_count()])
 
@@ -143,6 +149,17 @@ func resume() -> void:
 		pause_menu.set_open(false)
 
 # ================================================================ death
+## Shown once on a first new game. Pauses so nothing happens behind it.
+func _show_how_to_play() -> void:
+	var card: Control = load("res://ui/HowToPlay.gd").new()
+	add_child(card)
+	SceneFlow.set_paused(true)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	card.connect("closed", func() -> void:
+		card.queue_free()
+		SceneFlow.set_paused(false)
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
+
 func _on_death() -> void:
 	if _dead:
 		return

@@ -23,6 +23,7 @@ var _state_row: HBoxContainer
 var _state_labels: Array = []
 var _records: HBoxContainer
 var _objective: Label
+var _waypoint: Control
 var _objective_box: PanelContainer
 var _subtitle: Label
 var _subtitle_box: PanelContainer
@@ -199,6 +200,13 @@ func _build() -> void:
 	right.add_child(_records)
 
 	# ---- top-left objective
+	# Objective marker. Drawn under everything else so it never covers a prompt.
+	_waypoint = Control.new()
+	_waypoint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_waypoint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_waypoint.draw.connect(_draw_waypoint)
+	root.add_child(_waypoint)
+
 	_objective = UITheme.label("", 18, UITheme.TEXT)
 	_objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_objective.custom_minimum_size = Vector2(420, 0)
@@ -305,6 +313,67 @@ func _build() -> void:
 	_alert.add_child(_alert_bar)
 
 # ================================================================ drawing
+## The objective marker. On screen it is a diamond with the range under it; off
+## screen it becomes an arrow pinned to the edge, pointing the way to turn. A
+## player who does not know the map needs to be shown where to go, not told.
+func _draw_waypoint() -> void:
+	if chapter == null or player == null or not chapter.has_objective_marker():
+		return
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var target: Vector3 = chapter.objective_position
+	var dist := player.global_position.distance_to(target)
+	if dist < 4.0:
+		return
+	var c := _waypoint
+	var vp := c.size
+	var col := UITheme.GOLD
+	var behind := cam.is_position_behind(target)
+	var p := cam.unproject_position(target)
+	var on_screen := not behind and p.x > 40.0 and p.x < vp.x - 40.0 \
+		and p.y > 40.0 and p.y < vp.y - 60.0
+	if Settings.high_contrast_markers:
+		col = Color(1, 1, 1)
+
+	if on_screen:
+		if Settings.high_contrast_markers:
+			c.draw_circle(p, 15.0, Color(0, 0, 0, 0.5))
+		var d := 9.0
+		var pts := PackedVector2Array([
+			p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0),
+			p + Vector2(0, -d)])
+		c.draw_polyline(pts, col, 2.0, true)
+		c.draw_string(UITheme.font(), p + Vector2(-24, 26), "%d m" % int(dist),
+			HORIZONTAL_ALIGNMENT_CENTER, 48, 13, col)
+		return
+
+	# Off screen: put an arrow on the edge in the direction of the target.
+	var mid := vp * 0.5
+	var dir := (p - mid)
+	if behind:
+		dir = -dir
+	if dir.length_squared() < 1.0:
+		dir = Vector2(0, -1)
+	dir = dir.normalized()
+	var margin := Vector2(64.0, 74.0)
+	var half := vp * 0.5 - margin
+	var scale_v := INF
+	if absf(dir.x) > 0.0001:
+		scale_v = minf(scale_v, half.x / absf(dir.x))
+	if absf(dir.y) > 0.0001:
+		scale_v = minf(scale_v, half.y / absf(dir.y))
+	var edge := mid + dir * scale_v
+	var ang := dir.angle()
+	var tip := edge + dir * 12.0
+	var l := edge + Vector2(cos(ang + 2.4), sin(ang + 2.4)) * 13.0
+	var r := edge + Vector2(cos(ang - 2.4), sin(ang - 2.4)) * 13.0
+	if Settings.high_contrast_markers:
+		c.draw_circle(edge, 17.0, Color(0, 0, 0, 0.5))
+	c.draw_colored_polygon(PackedVector2Array([tip, l, r]), col)
+	c.draw_string(UITheme.font(), edge + Vector2(-26, 32), "%d m" % int(dist),
+		HORIZONTAL_ALIGNMENT_CENTER, 52, 13, col)
+
 func _draw_reticle() -> void:
 	var c := _reticle
 	var mid := c.size * 0.5
@@ -474,6 +543,8 @@ func _apply_accessibility() -> void:
 
 # ================================================================ frame
 func _process(dt: float) -> void:
+	if _waypoint != null:
+		_waypoint.queue_redraw()
 	if _subtitle_t > 0.0:
 		_subtitle_t -= dt
 		if _subtitle_t <= 0.0:

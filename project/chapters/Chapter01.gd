@@ -66,7 +66,7 @@ func build_world() -> void:
 	]
 
 	SceneFlow.report(0.16, "Cutting the valley")
-	build_terrain(Vector2(280, 280), 154, Callable(self, "_h"), "valley")
+	build_terrain(Vector2(280, 280), 231, Callable(self, "_h"), "valley")
 	spawn_position = on_ground(0, 64, 1.2)
 	await get_tree().process_frame
 
@@ -137,10 +137,10 @@ func _build_vegetation() -> void:
 	var excl: Array = []
 	for p in _pads:
 		excl.append(Rect2(p.x - p.z * 0.8, p.y - p.z * 0.8, p.z * 1.6, p.z * 1.6))
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(1, 6, 0.55, 0.05), 5200,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(1, 18, 0.55, 0.05), 5200,
 		Rect2(-130, -130, 260, 260), veg_sampler(30.0, excl),
 		Color(0.24, 0.30, 0.18), Color(0.42, 0.46, 0.24), Vector2(0.7, 1.7), 0.20, 11, 0.9)
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(2, 4, 1.15, 0.08), 1100,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(2, 12, 1.15, 0.08), 1100,
 		Rect2(-130, -130, 260, 260), veg_sampler(24.0, excl),
 		Color(0.30, 0.34, 0.20), Color(0.52, 0.54, 0.28), Vector2(0.7, 1.5), 0.30, 12, 1.6)
 
@@ -213,7 +213,8 @@ func _on_device_taken(dev: Node3D, halo: Node3D, lamp: Node3D) -> void:
 		"MOTE", 6.0)
 	Hints.request("veil_aim")
 	Hints.request("veil_cycle")
-	set_objective("Cross the fissure and reach the valley relay.")
+	set_objective("Cross the fissure and reach the valley relay.",
+		on_ground(0, -80) + Vector3(0, 6.0, 0))
 	GameState.award(120, "Veilforge Device recovered")
 
 # ---------------------------------------------------------------- bridge
@@ -660,7 +661,8 @@ func _build_relay() -> void:
 		if not pz.is_solved:
 			pz.mark_solved())
 
-	set_objective("Cross the fissure and reach the valley relay.")
+	set_objective("Cross the fissure and reach the valley relay.",
+		on_ground(0, -80) + Vector3(0, 6.0, 0))
 
 func _finale(base: Vector3) -> void:
 	if _relay_powered:
@@ -691,12 +693,17 @@ func on_begin(mode: String) -> void:
 		player.device.unlock_all()
 	Hints.request("move")
 	Hints.request("look")
+	# Interact is the first key the player actually needs -- the Device is an
+	# interactable and nothing else in the chapter opens until it is picked up.
+	Hints.request("interact")
 	if mode != "checkpoint":
 		say("Systems check. You are upright, the skiff is not, and the sky is still coming down.",
 			"MOTE", 5.2)
-		say("There is a device in the wreck cradle. Take it before the rain finds you.",
-			"MOTE", 5.0)
-		set_objective("Recover the Veilforge Device from the skiff cradle.")
+		say("There is a device in the wreck cradle, downhill and to your right. "
+			+ "Follow the gold marker. Take it before the rain finds you.",
+			"MOTE", 5.6)
+		set_objective("Recover the Veilforge Device from the skiff cradle.",
+			on_ground(0, 62) + Vector3(0, 1.2, 0))
 	weather.set_intensity(0.85)
 
 func ambience_profiles() -> Array:

@@ -55,7 +55,7 @@ func build_world() -> void:
 	spawn_yaw = PI
 
 	SceneFlow.report(0.12, "Raising the archipelago")
-	build_terrain(Vector2(320, 320), 156, Callable(self, "_h"), "islands",
+	build_terrain(Vector2(320, 320), 234, Callable(self, "_h"), "islands",
 		Veil.Surface.SAND)
 	spawn_position = on_ground(0, 100, 1.2)
 	await get_tree().process_frame
@@ -118,7 +118,7 @@ func _build_shores() -> void:
 			Vector3.ONE, Veil.Surface.METAL)
 
 func _build_dressing() -> void:
-	vegetation.scatter(ProcAssets.blade_cluster_mesh(71, 6, 0.8, 0.07), 4200,
+	vegetation.scatter(ProcAssets.blade_cluster_mesh(71, 18, 0.8, 0.07), 4200,
 		Rect2(-150, -150, 300, 300), veg_sampler(30.0, [], 1.0, 18.0),
 		Color(0.26, 0.36, 0.20), Color(0.46, 0.54, 0.26), Vector2(0.7, 1.8), 0.36, 61, 1.2)
 	vegetation.scatter(ProcAssets.canopy_mesh(72, 1.1, 3), 500,

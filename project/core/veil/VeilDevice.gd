@@ -55,11 +55,13 @@ func _ready() -> void:
 func unlock(feature: String) -> void:
 	if _unlocked.has(feature) and not _unlocked[feature]:
 		_unlocked[feature] = true
+		Hints.ability_unlocked(feature)
 		message.emit("Device module online: %s" % feature.capitalize(), "unlock")
 
 func unlock_all() -> void:
 	for k in _unlocked.keys():
 		_unlocked[k] = true
+	Hints.ability_unlocked("all")
 
 func is_unlocked(f: String) -> bool:
 	return bool(_unlocked.get(f, false))
