@@ -13,17 +13,17 @@ var _rebind_overlay: Control
 var _binding_rows: Dictionary = {}
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
 
 func _build() -> void:
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for m in ["margin_left", "margin_right"]:
 		margin.add_theme_constant_override(m, int(UITheme.s(90)))
 	margin.add_theme_constant_override("margin_top", int(UITheme.s(52)))
@@ -74,16 +74,16 @@ func _build() -> void:
 	vb.add_child(footer)
 
 	_rebind_overlay = Control.new()
-	_rebind_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_rebind_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_rebind_overlay.visible = false
 	_rebind_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_rebind_overlay)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_rebind_overlay.add_child(dim)
 	_rebind_label = UITheme.label("", 28, UITheme.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
-	_rebind_label.set_anchors_preset(Control.PRESET_CENTER)
+	_rebind_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_rebind_label.offset_left = -400
 	_rebind_label.offset_right = 400
 	_rebind_label.offset_top = -30

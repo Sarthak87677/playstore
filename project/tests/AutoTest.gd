@@ -32,6 +32,7 @@ func run(p_chapters: Array, p_shots: bool, p_quick: bool) -> void:
 		await _memidle(int(chapters[0]) - 1)
 		return
 	if shots and not ("play" in Log.skip):
+		await _shoot_front_end()
 		for c in chapters:
 			await _shotwalk(int(c) - 1)
 		get_tree().quit(0)
@@ -43,9 +44,11 @@ func run(p_chapters: Array, p_shots: bool, p_quick: bool) -> void:
 	await _test_progression()
 	await _test_audio()
 	print("      %s (after system tests)" % _mem())
+	await _test_menus()
 	for c in chapters:
 		await _test_chapter(int(c) - 1)
 	await _test_resume(int(chapters[0]) - 1)
+	await _test_pause_menu(int(chapters[0]) - 1)
 	_report()
 
 # ================================================================ helpers
@@ -316,6 +319,41 @@ func _memidle(idx: int) -> void:
 			OS.get_static_memory_usage() / 1048576.0, ProcAudio.cache_size()])
 	get_tree().quit(0)
 
+## Rendered capture of the front end, so the menus are evidenced as well as
+## asserted.
+func _shoot_front_end() -> void:
+	DirAccess.make_dir_recursive_absolute(shot_dir)
+	await SceneFlow.goto_menu(false)
+	var menu := get_tree().current_scene
+	await _wait(1.4)
+	await _shot("ui_main_menu")
+	menu._open("chapters")
+	await _wait(0.9)
+	await _shot("ui_chapter_select")
+	menu._close()
+	menu._open("settings")
+	await _wait(0.9)
+	await _shot("ui_settings")
+	menu._close()
+	await _wait(0.3)
+	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	GameState.award(Veil.xp_for_level(12), "capture")
+	GameState.data.components = 5
+	await SceneFlow.start_chapter(0, "new")
+	var game := get_tree().current_scene
+	game.toggle_pause()
+	await _wait(0.7)
+	game.pause_menu._open_panel("upgrades")
+	await _wait(1.0)
+	await _shot("ui_upgrades")
+	game.pause_menu._close_panel()
+	game.pause_menu._open_panel("records")
+	await _wait(1.0)
+	await _shot("ui_records")
+	game.pause_menu._close_panel()
+	game.resume()
+	await _wait(0.4)
+
 ## Rendered capture pass: load a chapter, fly a camera to a few vantage points
 ## and photograph each reality state. Used to eyeball the art direction.
 func _shotwalk(idx: int) -> void:
@@ -585,6 +623,103 @@ func _test_chapter(idx: int) -> void:
 
 func _node_count() -> int:
 	return get_tree().get_node_count()
+
+## Every front-end screen must build and open without errors, and the buttons
+## that matter must actually be wired to something.
+func _test_menus() -> void:
+	print("\n-- front end --")
+	await SceneFlow.goto_menu(false)
+	var menu := get_tree().current_scene
+	if not check("main menu scene loads", menu != null and menu.has_method("_open")):
+		return
+	var buttons: Array = []
+	for n in _walk(menu):
+		if n is Button:
+			buttons.append((n as Button).text)
+	check("main menu offers the expected entries",
+		"New Game" in buttons and "Continue" in buttons and "Settings" in buttons
+			and "Credits" in buttons and "Exit" in buttons and "Extras" in buttons
+			and "Chapter Select" in buttons,
+		", ".join(PackedStringArray(buttons)))
+	check("every main-menu button is connected", _all_buttons_connected(menu))
+
+	for panel in ["newgame", "chapters", "settings", "extras", "credits", "quit"]:
+		menu._open(panel)
+		await _wait(0.25)
+		var opened: bool = menu._sub != null and is_instance_valid(menu._sub)
+		check("main menu opens '%s'" % panel, opened)
+		if opened:
+			check("'%s' panel has working controls" % panel,
+				_all_buttons_connected(menu._sub))
+		menu._close()
+		await _wait(0.15)
+
+	# The settings panel must expose the real controls, not placeholders.
+	menu._open("settings")
+	await _wait(0.3)
+	var sliders := 0
+	var options := 0
+	var checks := 0
+	for n in _walk(menu._sub):
+		if n is HSlider: sliders += 1
+		elif n is OptionButton: options += 1
+		elif n is CheckButton: checks += 1
+	check("settings expose sliders, dropdowns and toggles",
+		sliders >= 8 and options >= 5 and checks >= 8,
+		"%d sliders, %d dropdowns, %d toggles" % [sliders, options, checks])
+	menu._close()
+	await _wait(0.2)
+
+## Every interactive control must be wired to something. Note that CheckButton
+## and OptionButton subclass Button but report through `toggled` and
+## `item_selected` rather than `pressed`.
+func _all_buttons_connected(root: Node) -> bool:
+	var ok := true
+	for n in _walk(root):
+		if n is OptionButton:
+			if (n as OptionButton).item_selected.get_connections().is_empty():
+				Log.warn("Unconnected dropdown")
+				ok = false
+		elif n is CheckButton or n is CheckBox:
+			if (n as BaseButton).toggled.get_connections().is_empty():
+				Log.warn("Unconnected toggle")
+				ok = false
+		elif n is Button and not (n as Button).disabled:
+			# UITheme.button() always attaches a click sound, so a real handler
+			# means more than one connection.
+			if (n as Button).pressed.get_connections().size() < 2:
+				Log.warn("Unconnected button: %s" % (n as Button).text)
+				ok = false
+		elif n is HSlider or n is VSlider:
+			if (n as Slider).value_changed.get_connections().is_empty():
+				Log.warn("Unconnected slider")
+				ok = false
+	return ok
+
+## The pause menu and every screen reachable from it.
+func _test_pause_menu(idx: int) -> void:
+	print("\n-- pause menu --")
+	GameState.start_new_game(2, Veil.Difficulty.FIELD)
+	await SceneFlow.start_chapter(idx, "new")
+	var game := get_tree().current_scene
+	game.toggle_pause()
+	await _wait(0.3)
+	check("pause stops the game", SceneFlow.is_paused())
+	check("pause menu opened", game.pause_menu != null and game.pause_menu._open)
+	check("pause menu buttons are connected", _all_buttons_connected(game.pause_menu))
+	for panel in ["upgrades", "records", "settings"]:
+		game.pause_menu._open_panel(panel)
+		await _wait(0.3)
+		var ok: bool = game.pause_menu._sub != null and is_instance_valid(game.pause_menu._sub)
+		check("pause menu opens '%s'" % panel, ok)
+		if ok:
+			check("'%s' controls are connected" % panel,
+				_all_buttons_connected(game.pause_menu._sub))
+		game.pause_menu._close_panel()
+		await _wait(0.15)
+	game.resume()
+	await _wait(0.3)
+	check("resume unpauses the game", not SceneFlow.is_paused())
 
 ## Close-and-resume: store a checkpoint, drop the profile as a quit would,
 ## reload it from disk and re-enter the chapter from that checkpoint.

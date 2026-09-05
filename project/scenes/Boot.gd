@@ -49,11 +49,11 @@ func _build() -> void:
 	add_child(_layer)
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG_SOLID
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_layer.add_child(bg)
 
 	_logo = Control.new()
-	_logo.set_anchors_preset(Control.PRESET_CENTER)
+	_logo.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_logo.custom_minimum_size = Vector2(320, 320)
 	_logo.offset_left = -160
 	_logo.offset_top = -200
@@ -63,7 +63,7 @@ func _build() -> void:
 	_logo.draw.connect(_draw_logo)
 
 	var v := VBoxContainer.new()
-	v.set_anchors_preset(Control.PRESET_CENTER)
+	v.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	v.offset_left = -500
 	v.offset_right = 500
 	v.offset_top = 110
@@ -81,7 +81,7 @@ func _build() -> void:
 
 	var skip := UITheme.label("press any key to skip", 14, UITheme.TEXT_FAINT,
 		HORIZONTAL_ALIGNMENT_CENTER)
-	skip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	skip.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	skip.offset_left = -300
 	skip.offset_right = 300
 	skip.offset_top = -70

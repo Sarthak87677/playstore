@@ -10,18 +10,18 @@ var _comp_label: Label
 var _rows: Dictionary = {}
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
 	GameState.upgrade_bought.connect(func(_id: String, _r: int) -> void: _refresh())
 
 func _build() -> void:
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", int(UITheme.s(70)))
 	margin.add_theme_constant_override("margin_right", int(UITheme.s(70)))
 	margin.add_theme_constant_override("margin_top", int(UITheme.s(46)))

@@ -98,20 +98,20 @@ func _mkbox(child: Control, color: Color = UITheme.PANEL) -> PanelContainer:
 
 func _build() -> void:
 	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
 	# ---- damage flash
 	_damage_flash = ColorRect.new()
 	_damage_flash.color = Color(0.8, 0.1, 0.1, 0.0)
-	_damage_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_damage_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_damage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_damage_flash)
 
 	# ---- reticle
 	_reticle = Control.new()
-	_reticle.set_anchors_preset(Control.PRESET_CENTER)
+	_reticle.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_reticle.custom_minimum_size = Vector2(28, 28)
 	_reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_reticle)
@@ -119,7 +119,7 @@ func _build() -> void:
 
 	# ---- hold-to-use ring
 	_hold_ring = Control.new()
-	_hold_ring.set_anchors_preset(Control.PRESET_CENTER)
+	_hold_ring.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_hold_ring.custom_minimum_size = Vector2(70, 70)
 	_hold_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_hold_ring)
@@ -127,7 +127,7 @@ func _build() -> void:
 
 	# ---- bottom-left vitals
 	var vitals := VBoxContainer.new()
-	vitals.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	vitals.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	vitals.offset_left = 34
 	vitals.offset_top = -170
 	vitals.offset_right = 330
@@ -170,7 +170,7 @@ func _build() -> void:
 
 	# ---- bottom-right: state selector + records
 	var right := VBoxContainer.new()
-	right.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	right.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	right.offset_left = -360
 	right.offset_top = -150
 	right.offset_right = -30
@@ -203,7 +203,7 @@ func _build() -> void:
 	_objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_objective.custom_minimum_size = Vector2(420, 0)
 	_objective_box = _mkbox(_objective)
-	_objective_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_objective_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	_objective_box.offset_left = 30
 	_objective_box.offset_top = 26
 	_objective_box.offset_right = 470
@@ -211,7 +211,7 @@ func _build() -> void:
 
 	# ---- top-right: level + timer + fps
 	var tr := VBoxContainer.new()
-	tr.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	tr.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	tr.offset_left = -300
 	tr.offset_top = 26
 	tr.offset_right = -30
@@ -232,7 +232,7 @@ func _build() -> void:
 
 	# ---- toasts (XP / pickups)
 	_toasts = VBoxContainer.new()
-	_toasts.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_toasts.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
 	_toasts.offset_left = -330
 	_toasts.offset_top = -120
 	_toasts.offset_right = -30
@@ -243,7 +243,7 @@ func _build() -> void:
 
 	# ---- scan readout
 	_scan_box = VBoxContainer.new()
-	_scan_box.set_anchors_preset(Control.PRESET_CENTER)
+	_scan_box.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_scan_box.offset_left = -160
 	_scan_box.offset_top = 48
 	_scan_box.offset_right = 160
@@ -259,7 +259,7 @@ func _build() -> void:
 	# ---- interaction prompt
 	_prompt = UITheme.label("", 18, UITheme.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	_prompt_box = _mkbox(_prompt)
-	_prompt_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_prompt_box.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_prompt_box.offset_left = -220
 	_prompt_box.offset_top = -230
 	_prompt_box.offset_right = 220
@@ -271,7 +271,7 @@ func _build() -> void:
 	_tutorial = UITheme.label("", 17, UITheme.ACCENT_WARM, HORIZONTAL_ALIGNMENT_CENTER)
 	_tutorial.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_tutorial_box = _mkbox(_tutorial, Color(0.06, 0.05, 0.03, 0.86))
-	_tutorial_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_tutorial_box.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_tutorial_box.offset_left = -300
 	_tutorial_box.offset_top = 100
 	_tutorial_box.offset_right = 300
@@ -282,7 +282,7 @@ func _build() -> void:
 	_subtitle = UITheme.label("", 26, UITheme.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_subtitle_box = _mkbox(_subtitle, Color(0, 0, 0, 0.55))
-	_subtitle_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_subtitle_box.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_subtitle_box.offset_left = -460
 	_subtitle_box.offset_top = -140
 	_subtitle_box.offset_right = 460
@@ -292,7 +292,7 @@ func _build() -> void:
 
 	# ---- guardian awareness
 	_alert = VBoxContainer.new()
-	_alert.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_alert.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_alert.offset_left = -110
 	_alert.offset_top = 44
 	_alert.offset_right = 110

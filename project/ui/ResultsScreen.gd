@@ -14,16 +14,16 @@ func _ready() -> void:
 
 func _build() -> void:
 	_root = Control.new()
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.visible = false
 	add_child(_root)
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG_SOLID
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(bg)
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", int(UITheme.s(140)))
 	margin.add_theme_constant_override("margin_right", int(UITheme.s(140)))
 	margin.add_theme_constant_override("margin_top", int(UITheme.s(60)))

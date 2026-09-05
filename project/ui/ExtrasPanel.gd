@@ -8,7 +8,7 @@ signal closed()
 var _tabs: TabContainer
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if not GameState.has_profile():
 		var newest := SaveSystem.newest_slot()
 		if newest >= 0:
@@ -18,10 +18,10 @@ func _ready() -> void:
 func _build() -> void:
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", int(UITheme.s(80)))
 	margin.add_theme_constant_override("margin_right", int(UITheme.s(80)))
 	margin.add_theme_constant_override("margin_top", int(UITheme.s(48)))

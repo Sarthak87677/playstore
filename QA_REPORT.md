@@ -25,7 +25,10 @@ actual game** rather than exercising functions in isolation. Invoked with
 * damages the player, kills the player, and confirms respawn at a checkpoint,
 * stuns and disables a guardian,
 * solves every puzzle and confirms each reports solved,
-* completes the chapter and checks the record, rank and next-chapter unlock.
+* completes the chapter and checks the record, rank and next-chapter unlock,
+* opens the main menu, chapter select, pause menu, Settings, Upgrades and
+  Field Records, asserts every control is actually connected to a handler,
+  and asserts each panel occupies a non-degenerate rectangle.
 
 It prints one PASS/FAIL line per check, exits non-zero on any failure, and
 writes `user://autotest_report.txt`.
@@ -43,7 +46,7 @@ godot --headless --path project -- --autotest --chapters=1,2,3,4,5,6,7,8
 ### Source tree
 
 ```
-=== RESULT: 327/327 checks passed, 0 failed ===
+=== RESULT: 353/353 checks passed, 0 failed ===
 ```
 
 ### Packaged build
@@ -54,7 +57,7 @@ the source tree, to prove the export packages every resource:
 
 ```
 ./build/verify/VEILFORGE_verify.x86_64 --headless -- --autotest --chapters=1,2,3,4,5,6,7,8
-=== RESULT: 327/327 checks passed, 0 failed ===
+=== RESULT: 353/353 checks passed, 0 failed ===
 ```
 
 No missing-resource, failed-load or shader-compile errors in the packaged run.
@@ -63,12 +66,15 @@ No missing-resource, failed-load or shader-compile errors in the packaged run.
 
 | Area | Checks | Result |
 | --- | --- | --- |
-| Settings: input map, presets, audio buses, persistence round-trip, accessibility | 11 | pass |
-| Saves: write, read back, corruption recovery, erase, missing data, hand-mangled types | 9 | pass |
-| Progression: XP curve, levels, upgrade gating, derived stats, chain multiplier, results, ranks, NG+ | 23 | pass |
-| Procedural audio and assets: buffers, loops, per-state difference, mesh geometry, caching | 12 | pass |
-| Per chapter (×8): build, contents, physics, movement, device, state switching, collision difference, scan/imprint, checkpoint, damage/death/respawn, guardians, puzzles, completion | 33 each | pass |
-| Close and resume: checkpoint written, profile reloaded from disk, XP preserved, resumed at the checkpoint, missing save handled | 10 | pass |
+| Settings: input map, graphics presets, audio buses, persistence round-trip, colour-blind palette, shake disable | 9 | pass |
+| Saves: write, read back, corrupt-recovers-from-backup, erase, missing data, hand-mangled types | 10 | pass |
+| Progression: XP curve, levels, upgrade gating and tiers, derived stats, chain multiplier, results scoring, ranks, mastery, NG+ | 23 | pass |
+| Procedural audio: buffer generation, loop points, per-state difference, bus response, cache bounds | 5 | pass |
+| Procedural assets: materials, mesh geometry, collision shapes, caching | 5 | pass |
+| Front end: splash, main menu, chapter select, settings panel, every button connected, panel layout non-degenerate | 16 | pass |
+| Per chapter (×8): build, contents, physics, movement, device, state switching, collision difference, scan/imprint, checkpoints, damage/death/respawn, guardians, puzzles, completion, rank | 30–34 each, 265 total | pass |
+| Close and resume: checkpoint written to disk, profile dropped and reloaded, XP preserved, resumed at the checkpoint, erased slot, no-slot Continue | 10 | pass |
+| Pause menu: pause stops the game, menu opens, buttons connected, Upgrades / Records / Settings panels open with live controls, resume | 10 | pass |
 
 ---
 
@@ -140,6 +146,8 @@ and is fixed in the current build.
 | --- | --- | --- |
 | **Critical** | The terrain heightfield's triangles were wound counter-clockwise, so Godot back-face culled the entire ground. Every prop appeared to float in an empty sky. | Rendered capture pass — invisible in headless testing, since no check looks at pixels |
 | **Critical** | `HUD.toast()` trimmed old toasts with `while get_child_count() > 7: get_child(0).queue_free()`. `queue_free()` does not detach the child until end of frame, so the loop never terminated and flooded the SceneTree deletion queue — 14 GB RSS in ~2 minutes, then an OOM kill. This would have frozen the shipped game the first time eight notifications appeared. | Full-chapter test dying with SIGKILL; located by bisecting with RSS sampling |
+| **Critical** | Every full-screen panel used `set_anchors_preset(PRESET_FULL_RECT)`, which keeps the existing offsets by default. Panels parented to a Control therefore stayed 0×0: Settings, Upgrades, Field Records, Chapter Select, the results screen and the HUD's own containers all collapsed — backgrounds absent, content clipped to nothing. 59 call sites across 10 files, now `set_anchors_and_offsets_preset`. | Rendered front-end capture pass — headless checks asserted the buttons existed and were connected, which they were; nothing looked at the rectangle they occupied |
+| High | The main menu and the pause menu drew their own button list on top of any sub-panel they opened, so Settings and Upgrades appeared behind the menu. The menu list is now hidden while a panel is open. | Rendered front-end capture pass |
 | **Critical** | Typed `@export var accepted: Array[int]` rejected a plain array literal at runtime. The assignment threw, aborting the rest of the chapter's build function and silently dropping a Memory Fragment. | "three memory fragments [2 found]" failing in chapter 2 |
 | High | The procedural audio cache was keyed on a continuously varying brightness value, so the music sequencer allocated and cached a fresh ~200 KB buffer every beat, unbounded. | Memory bisect |
 | High | Positional one-shot audio players were freed only on `finished`, which a silent fallback audio driver never emits — one leaked node per footstep. The replacement timer then captured the freed node in a lambda. | Node-count tracking, then a lambda-capture error |
@@ -167,10 +175,10 @@ and is fixed in the current build.
 | All three reality states affect actual gameplay | Pass | "all veil subjects switch cleanly" and "reality states change collision" pass in all 8 chapters |
 | XP, upgrades, bonuses and collectibles persist correctly | Pass | Progression suite; "upgrades persist", "fragments persist", "xp survived the restart" |
 | Controller and keyboard controls work | Pass | Every action has both a keyboard/mouse and a controller binding and is present in the input map; the harness drives the game through those actions. Physical controller hardware was not available |
-| Pause, settings and accessibility options work | Pass | Preset application, audio bus levels, settings round-trip, colour-blind palette, shake disable |
+| Pause, settings and accessibility options work | Pass | Pause halts the game and resumes; the pause menu opens Upgrades, Field Records and Settings with connected, correctly sized controls; preset application, audio bus levels, settings round-trip, colour-blind palette, shake disable |
 | Missing save data is handled safely | Pass | "missing save handled safely", "mangled types sanitised", "corrupt save recovers from backup", "continue finds no slot to load" |
 | The game can be closed and resumed correctly | Pass | Close-and-resume test: profile dropped from memory, reloaded from disk, resumed 0.3 m from the checkpoint |
-| No unavoidable crashes or progression blockers | Pass | 327/327 with no crash in eight full chapter runs, twice (source and packaged) |
+| No unavoidable crashes or progression blockers | Pass | 353/353 with no crash in eight full chapter runs, twice (source and packaged) |
 | No required asset missing from the packaged build | Pass | Full suite run against the packaged binary with no load errors |
 | No network connection is attempted | Pass | `strace`: zero internet sockets, zero `connect()` calls |
 | The distributable build matches the editable project | Pass | The ZIP is produced by exporting `project/` directly; the verification binary is the same export with the same content filter |

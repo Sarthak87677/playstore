@@ -21,17 +21,17 @@ func bind(g: Node) -> void:
 
 func _build() -> void:
 	_root = Control.new()
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.visible = false
 	add_child(_root)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0.01, 0.015, 0.02, 0.88)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
 
 	var left := VBoxContainer.new()
-	left.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	left.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
 	left.offset_left = UITheme.s(90)
 	left.offset_top = UITheme.s(120)
 	left.offset_right = UITheme.s(460)
@@ -61,7 +61,7 @@ func _build() -> void:
 		left.add_child(b)
 
 	_panel_holder = Control.new()
-	_panel_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_panel_holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(_panel_holder)
 
 	_confirm = _build_confirm()
@@ -69,15 +69,15 @@ func _build() -> void:
 
 func _build_confirm() -> Control:
 	var c := Control.new()
-	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	c.visible = false
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.75)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	c.add_child(dim)
 	var pc := PanelContainer.new()
 	pc.add_theme_stylebox_override("panel", UITheme.panel(UITheme.PANEL_HI, 6, 1, UITheme.ACCENT))
-	pc.set_anchors_preset(Control.PRESET_CENTER)
+	pc.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	pc.offset_left = -UITheme.s(280)
 	pc.offset_right = UITheme.s(280)
 	pc.offset_top = -UITheme.s(110)
@@ -138,13 +138,19 @@ func _open_panel(which: String) -> void:
 			_sub = UpgradePanel.new()
 	if _sub == null:
 		return
+	# The pause list must get out of the way, or it draws on top of the panel
+	# it just opened.
+	_menu.visible = false
 	_panel_holder.add_child(_sub)
 	_sub.connect("closed", Callable(self, "_close_panel"))
 
 func _close_panel() -> void:
 	if _sub != null and is_instance_valid(_sub):
+		_panel_holder.remove_child(_sub)
 		_sub.queue_free()
 	_sub = null
+	if _menu:
+		_menu.visible = true
 
 func _save_now() -> void:
 	if GameState.save():

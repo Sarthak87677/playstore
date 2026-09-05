@@ -46,23 +46,23 @@ func _build_overlay() -> void:
 
 	_fade = ColorRect.new()
 	_fade.color = Color(0, 0, 0, 0)
-	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(_fade)
 
 	_load_root = Control.new()
-	_load_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_load_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_load_root.visible = false
 	_load_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	_layer.add_child(_load_root)
 
 	var bg := ColorRect.new()
 	bg.color = Color(0.020, 0.024, 0.031, 1.0)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_load_root.add_child(bg)
 
 	var vb := VBoxContainer.new()
-	vb.set_anchors_preset(Control.PRESET_CENTER)
+	vb.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	vb.custom_minimum_size = Vector2(720, 0)
 	vb.offset_left = -360
 	vb.offset_top = -110

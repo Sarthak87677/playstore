@@ -45,7 +45,7 @@ launched.
 What *was* verified is the packaged content: an equivalent Linux export was
 produced from the same project with the same `all_resources` export filter, and
 the full automated playtest was run **against that packaged binary** rather than
-against the source tree — 317/317 checks passing, with no missing-resource
+against the source tree — 353/353 checks passing, with no missing-resource
 errors. That proves the export pipeline packages every material, shader, scene
 and script correctly; it does not prove the Windows binary launches on Windows.
 

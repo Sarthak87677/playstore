@@ -15,7 +15,7 @@ var _slot_note: Label
 var _t := 0.0
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_build_backdrop()
 	_build_ui()
@@ -27,16 +27,25 @@ func _build_backdrop() -> void:
 	add_child(_bg_world)
 	_bg_atmo = Atmosphere.new()
 	_bg_world.add_child(_bg_atmo)
+	# Menu-only palettes. These are deliberately darker and less foggy than the
+	# in-game ones: the backdrop is seen against a title and a button column, so
+	# it has to sit back and keep its silhouettes rather than fill the frame with
+	# a bright horizon.
 	_bg_atmo.setup([
-		Atmosphere.palette(Color(0.16, 0.26, 0.44), Color(0.62, 0.76, 0.92),
-			Color(0.70, 0.80, 0.92), Color(1.0, 0.97, 0.92), 2.1, 0.006, 0.024,
-			{"glow": 0.7, "sun_pitch": -18.0, "sun_yaw": 140.0}),
-		Atmosphere.palette(Color(0.10, 0.11, 0.14), Color(0.40, 0.42, 0.48),
-			Color(0.36, 0.38, 0.44), Color(0.92, 0.86, 0.80), 1.1, 0.016, 0.040,
-			{"glow": 0.35, "saturation": 0.78, "sun_pitch": -12.0, "sun_yaw": 120.0}),
-		Atmosphere.palette(Color(0.10, 0.24, 0.20), Color(0.52, 0.82, 0.64),
-			Color(0.48, 0.76, 0.62), Color(1.0, 0.98, 0.88), 1.8, 0.008, 0.030,
-			{"glow": 0.66, "saturation": 1.12, "sun_pitch": -22.0, "sun_yaw": 160.0}),
+		Atmosphere.palette(Color(0.05, 0.10, 0.21), Color(0.24, 0.36, 0.54),
+			Color(0.22, 0.31, 0.45), Color(1.0, 0.97, 0.92), 1.7, 0.0035, 0.020,
+			{"glow": 0.75, "sun_pitch": -14.0, "sun_yaw": 140.0, "sky_energy": 0.42,
+			 "contrast": 1.16, "ambient": 0.5, "fog_aerial": 0.07, "fog_begin": 34.0}),
+		Atmosphere.palette(Color(0.035, 0.040, 0.052), Color(0.155, 0.160, 0.190),
+			Color(0.135, 0.145, 0.175), Color(0.92, 0.86, 0.80), 0.9, 0.0090, 0.034,
+			{"glow": 0.40, "saturation": 0.80, "sun_pitch": -9.0, "sun_yaw": 120.0,
+			 "sky_energy": 0.36, "contrast": 1.18, "ambient": 0.42,
+			 "fog_aerial": 0.09, "fog_begin": 30.0}),
+		Atmosphere.palette(Color(0.035, 0.105, 0.085), Color(0.20, 0.37, 0.27),
+			Color(0.18, 0.33, 0.25), Color(1.0, 0.98, 0.88), 1.5, 0.0045, 0.026,
+			{"glow": 0.70, "saturation": 1.14, "sun_pitch": -18.0, "sun_yaw": 160.0,
+			 "sky_energy": 0.40, "contrast": 1.14, "ambient": 0.48,
+			 "fog_aerial": 0.07, "fog_begin": 32.0}),
 	], _state)
 
 	_bg_cam = Camera3D.new()
@@ -78,14 +87,31 @@ func _build_backdrop() -> void:
 
 # ================================================================ ui
 func _build_ui() -> void:
+	# A solid column behind the menu, then a soft falloff, so the text stays
+	# readable whatever the live backdrop is doing.
 	var scrim := ColorRect.new()
-	scrim.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	scrim.offset_right = 720
-	scrim.color = Color(0.01, 0.015, 0.02, 0.72)
+	scrim.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+	scrim.offset_right = 560
+	scrim.color = Color(0.012, 0.016, 0.022, 0.93)
 	add_child(scrim)
+	var fade := TextureRect.new()
+	fade.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+	fade.offset_left = 560
+	fade.offset_right = 900
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	var grad := GradientTexture2D.new()
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 1.0])
+	g.colors = PackedColorArray([Color(0.012, 0.016, 0.022, 0.93),
+		Color(0.012, 0.016, 0.022, 0.0)])
+	grad.gradient = g
+	grad.fill_from = Vector2(0, 0)
+	grad.fill_to = Vector2(1, 0)
+	fade.texture = grad
+	add_child(fade)
 
 	var v := VBoxContainer.new()
-	v.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+	v.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
 	v.offset_left = UITheme.s(84)
 	v.offset_top = UITheme.s(92)
 	v.offset_right = UITheme.s(560)
@@ -139,13 +165,13 @@ func _build_ui() -> void:
 	var version := UITheme.label("v%s   -   fully offline, no accounts, no telemetry" % \
 		ProjectSettings.get_setting("application/config/version", "1.0.0"),
 		14, UITheme.TEXT_FAINT)
-	version.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	version.offset_left = UITheme.s(84)
 	version.offset_top = -UITheme.s(46)
 	add_child(version)
 
 	_panel = Control.new()
-	_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_panel)
 	cont.grab_focus() if has_save else ng.grab_focus()
 
@@ -163,6 +189,8 @@ func _save_summary() -> String:
 # ================================================================ panels
 func _open(which: String) -> void:
 	_close()
+	if which != "quit" and _menu:
+		_menu.visible = false
 	match which:
 		"settings":
 			_sub = SettingsPanel.new()
@@ -182,18 +210,20 @@ func _close() -> void:
 	if _sub != null and is_instance_valid(_sub):
 		_sub.queue_free()
 	_sub = null
+	if _menu:
+		_menu.visible = true
 	if _slot_note:
 		_slot_note.text = _save_summary()
 
 func _shell(title: String) -> Dictionary:
 	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = UITheme.BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(bg)
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", int(UITheme.s(110)))
 	margin.add_theme_constant_override("margin_right", int(UITheme.s(110)))
 	margin.add_theme_constant_override("margin_top", int(UITheme.s(56)))
@@ -407,14 +437,14 @@ func _credits_panel() -> Control:
 
 func _quit_panel() -> Control:
 	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.78)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(dim)
 	var pc := PanelContainer.new()
 	pc.add_theme_stylebox_override("panel", UITheme.panel(UITheme.PANEL_HI, 6, 1, UITheme.ACCENT))
-	pc.set_anchors_preset(Control.PRESET_CENTER)
+	pc.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	pc.offset_left = -UITheme.s(260)
 	pc.offset_right = UITheme.s(260)
 	pc.offset_top = -UITheme.s(90)
