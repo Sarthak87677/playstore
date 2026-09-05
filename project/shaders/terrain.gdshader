@@ -19,6 +19,7 @@ uniform vec4 peak_tint   : source_color = vec4(0.72, 0.74, 0.78, 1.0);
 uniform float uv_scale = 0.075;
 uniform float macro_scale = 0.006;
 uniform float macro_strength : hint_range(0.0, 1.0) = 0.35;
+uniform float ground_variation : hint_range(0.0, 1.0) = 0.7;
 uniform float slope_start : hint_range(0.0, 1.0) = 0.62;
 uniform float slope_end   : hint_range(0.0, 1.0) = 0.88;
 uniform float peak_start = 24.0;
@@ -55,7 +56,17 @@ void fragment() {
 		slope_end + (macro - 0.5) * 0.18, up);
 	float peak = smoothstep(peak_start, peak_end, w_pos.y + (macro - 0.5) * 8.0);
 
-	vec3 a_ground = triplanar(tex_ground, w_pos, n, uv_scale) * ground_tint.rgb;
+	// Two-tone ground. A single flat tint over the whole valley is what reads as
+	// a painted plane rather than as land: real ground is patchy, drier on the
+	// rises and richer in the hollows. A second, lower-frequency noise band
+	// pushes the ground tint toward a drier, less saturated variant so the
+	// colour breaks up at a scale you notice while walking.
+	float patch = texture(macro_tex, w_pos.xz * macro_scale * 3.1 + vec2(0.37, 0.11)).r;
+	patch = smoothstep(0.34, 0.72, patch);
+	vec3 dry = mix(ground_tint.rgb, vec3(dot(ground_tint.rgb, vec3(0.299, 0.587, 0.114))),
+		0.45) * 1.18;
+	vec3 g_tint = mix(ground_tint.rgb, dry, patch * ground_variation);
+	vec3 a_ground = triplanar(tex_ground, w_pos, n, uv_scale) * g_tint;
 	vec3 a_slope  = triplanar(tex_slope,  w_pos, n, uv_scale * 0.55) * slope_tint.rgb;
 	vec3 a_peak   = triplanar(tex_peak,   w_pos, n, uv_scale * 0.8) * peak_tint.rgb;
 

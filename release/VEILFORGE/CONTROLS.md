@@ -11,6 +11,21 @@ controls the camera; its sensitivity is separate from the mouse.
 
 ---
 
+## If you have just started
+
+A **How to Play** card appears the first time you begin a new game, listing
+every control below in the order you need them. It is always available again
+from **Pause → How to Play**.
+
+The **gold diamond** on screen is your current objective, with the distance
+under it. When the objective is behind you the diamond becomes an arrow pinned
+to the edge of the screen, pointing the way to turn. Follow it.
+
+MOTE talks to you, and *Ask MOTE* (`H`) always answers about whatever you are
+nearest — it is never required, but it never refuses either.
+
+---
+
 ## Movement
 
 | Action              | Keyboard / Mouse       | Controller        |

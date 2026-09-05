@@ -20,6 +20,15 @@ redistributed without a licence. Rather than ship placeholder cubes or a small
 number of purchased assets, the game commits to a coherent procedural art
 direction and applies it consistently across all eight chapters.
 
+A player put it plainly: it looks stylised, not photoreal. That is correct, and
+it is a ceiling rather than a bug. Since that feedback the terrain runs at
+roughly half the cell size it did, vegetation is three times denser, rock and
+canopy meshes carry far more geometry, and the ground shader breaks up its own
+colour so a valley is not one flat green. It reads considerably better. It
+still does not read as photography, and no amount of the same kind of work will
+get it there: photorealism comes from scanned materials and sculpted assets,
+which is a different production, not a different parameter.
+
 The most visible consequences:
 
 * **Surface detail is noise-derived.** It reads correctly at gameplay distance
