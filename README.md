@@ -71,7 +71,18 @@ Deleting that folder resets the game to a fresh install.
 
 The renderer is Godot's Forward+ (Vulkan). A Vulkan-capable GPU is required.
 
-If the game will not start on an older GPU, run it with the compatibility
+### If it does not start
+
+The splash screen shows a boot stage in small text at the bottom (`materials
+3/21`, `audio 7/14`, `ready`, `main menu`). If the window opens grey and empty
+with no splash at all, the game never drew a frame, which on Windows is almost
+always the graphics driver rather than the game.
+
+**First run is the slow one.** Godot compiles its shader variants the first time
+they are used and caches them, so the first launch can sit on the splash for a
+while on a modest GPU. The second launch is much faster.
+
+If it will not start at all, or stays grey, run it with the compatibility
 renderer:
 
 ```
@@ -80,6 +91,10 @@ VEILFORGE.exe --rendering-method gl_compatibility
 
 Visual quality drops (no SDFGI, no volumetric fog, no SSR) but the game is fully
 playable.
+
+A log of the session, including every boot stage, is written to
+`%APPDATA%\Godot\app_userdata\VEILFORGE - THE THREEFOLD EARTH\veilforge.log`,
+and it is flushed line by line, so it survives a force-quit.
 
 ---
 

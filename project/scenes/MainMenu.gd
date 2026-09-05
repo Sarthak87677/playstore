@@ -26,6 +26,7 @@ func _build_backdrop() -> void:
 	_bg_world = Node3D.new()
 	add_child(_bg_world)
 	_bg_atmo = Atmosphere.new()
+	_bg_atmo.lightweight = true
 	_bg_world.add_child(_bg_atmo)
 	# Menu-only palettes. These are deliberately darker and less foggy than the
 	# in-game ones: the backdrop is seen against a title and a button column, so
@@ -47,6 +48,7 @@ func _build_backdrop() -> void:
 			 "sky_energy": 0.40, "contrast": 1.14, "ambient": 0.48,
 			 "fog_aerial": 0.07, "fog_begin": 32.0}),
 	], _state)
+
 
 	_bg_cam = Camera3D.new()
 	_bg_cam.fov = 52.0

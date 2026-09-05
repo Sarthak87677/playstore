@@ -8,6 +8,7 @@ var _title: Label
 var _byline: Label
 var _t := 0.0
 var _skipped := false
+var _status: Label
 
 func _ready() -> void:
 	Log.info("Boot: %s" % ProjectSettings.get_setting("application/config/name"))
@@ -88,6 +89,22 @@ func _build() -> void:
 	skip.offset_bottom = -40
 	_layer.add_child(skip)
 
+	# Boot stage, on screen. If start-up ever stalls on someone's machine this
+	# says where, without asking them to go and find a log file.
+	_status = UITheme.label("starting", 13, UITheme.TEXT_FAINT,
+		HORIZONTAL_ALIGNMENT_CENTER)
+	_status.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_status.offset_left = -300
+	_status.offset_right = 300
+	_status.offset_top = -40
+	_status.offset_bottom = -14
+	_layer.add_child(_status)
+
+func _stage(text: String) -> void:
+	Log.info("Boot stage: %s" % text)
+	if _status != null and is_instance_valid(_status):
+		_status.text = text
+
 func _draw_logo() -> void:
 	var mid := _logo.size * 0.5
 	var r := 92.0
@@ -121,28 +138,51 @@ func _unhandled_input(e: InputEvent) -> void:
 		_skipped = true
 
 func _run() -> void:
-	# Warm the procedural caches while the splash plays.
+	# Two frames before any work. `process_frame` is emitted during a frame,
+	# before anything is drawn, so warming the caches on the first one meant the
+	# splash never reached the screen: the window sat on the engine's grey clear
+	# colour for the whole warm-up, which is indistinguishable from a hang.
 	await get_tree().process_frame
-	_warm()
+	await get_tree().process_frame
+	await _warm()
 	var start := Time.get_ticks_msec()
 	while (Time.get_ticks_msec() - start) < 2600 and not _skipped:
 		await get_tree().process_frame
 	var t := create_tween()
 	t.tween_property(_layer, "offset", Vector2(0, -40), 0.4)
 	await SceneFlow.fade_to_black(0.45)
+	_stage("main menu")
 	_layer.queue_free()
 	await SceneFlow.goto_menu(false)
+	Log.info("Boot: main menu is up")
 
+## Warms the procedural caches one step at a time, yielding a frame between
+## each, so the splash keeps animating and the window keeps pumping messages.
+## Doing it in a single blocking pass stalls the renderer for however long it
+## takes, and on a slow machine that looks exactly like a crash.
 func _warm() -> void:
-	# Materials and their noise textures generate on engine threads; touching
-	# them here means the first chapter does not pay for all of them at once.
-	for m in ["rock", "cliff", "concrete", "metal", "metal_rust", "metal_dark",
+	var t0 := Time.get_ticks_msec()
+	var mats := ["rock", "cliff", "concrete", "metal", "metal_rust", "metal_dark",
 			"glass", "wood", "bark", "foliage", "grass", "dirt", "sand", "snow",
-			"water", "ice", "tile", "nacre", "moss", "brass", "resin"]:
-		ProcAssets.mat(m)
-	for s in ["ui_click", "ui_hover", "ui_back", "ui_confirm", "ui_deny",
+			"water", "ice", "tile", "nacre", "moss", "brass", "resin"]
+	for i in mats.size():
+		_stage("materials %d/%d" % [i + 1, mats.size()])
+		ProcAssets.mat(mats[i])
+		await get_tree().process_frame
+	Log.info("Boot: materials warmed in %d ms" % (Time.get_ticks_msec() - t0))
+
+	var t1 := Time.get_ticks_msec()
+	var sfx := ["ui_click", "ui_hover", "ui_back", "ui_confirm", "ui_deny",
 			"shift_memory", "shift_ruin", "shift_bloom", "scan_start", "scan_done",
-			"collect", "checkpoint", "jump", "land_soft"]:
-		ProcAudio.sfx(s)
+			"collect", "checkpoint", "jump", "land_soft"]
+	for i in sfx.size():
+		_stage("audio %d/%d" % [i + 1, sfx.size()])
+		ProcAudio.sfx(sfx[i])
+		await get_tree().process_frame
+	_stage("ambience")
+	await get_tree().process_frame
 	ProcAudio.ambience("wind")
+	await get_tree().process_frame
+	Log.info("Boot: audio warmed in %d ms" % (Time.get_ticks_msec() - t1))
+	_stage("ready")
 	Log.info("Warm-up complete: %d audio buffers cached" % ProcAudio.cache_size())

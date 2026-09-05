@@ -149,17 +149,24 @@ func _apply(p: Dictionary, instant: bool) -> void:
 	fill.light_color = p.get("fill_color", Color(0.55, 0.65, 0.85))
 	fill.light_energy = float(p.get("fill_energy", 0.22))
 
+## Set on the main-menu backdrop. It is scenery behind a button column, it
+## gains almost nothing from global illumination, volumetric fog or screen-space
+## reflections, and those are the most expensive shader variants in the game --
+## on a cold shader cache they are what stands between the player and the first
+## thing they see.
+var lightweight := false
+
 func _apply_quality() -> void:
 	var d := Settings.preset_data()
 	var env := environment
 	if env == null:
 		return
-	env.ssao_enabled = bool(d.ssao)
-	env.ssil_enabled = bool(d.ssil)
-	env.ssr_enabled = bool(d.ssr)
-	env.volumetric_fog_enabled = bool(d.volumetric)
+	env.ssao_enabled = bool(d.ssao) and not lightweight
+	env.ssil_enabled = bool(d.ssil) and not lightweight
+	env.ssr_enabled = bool(d.ssr) and not lightweight
+	env.volumetric_fog_enabled = bool(d.volumetric) and not lightweight
 	env.glow_enabled = bool(d.glow)
-	env.sdfgi_enabled = bool(d.sdfgi)
+	env.sdfgi_enabled = bool(d.sdfgi) and not lightweight
 	env.sdfgi_cascades = 4
 	env.sdfgi_min_cell_size = 0.25
 	env.sdfgi_use_occlusion = true
