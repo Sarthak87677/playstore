@@ -172,6 +172,7 @@ func perform_shift() -> bool:
 	if manager:
 		manager.mark_dirty()
 	GameState.note_shift()
+	Settings.rumble(0.28, 0.42, 0.24)
 	Hints.did("veil_shift")
 	Hints.note_progress()
 	AudioDirector.play(["shift_memory", "shift_ruin", "shift_bloom"][selected_state], -4.0)
@@ -385,6 +386,7 @@ func try_imprint() -> bool:
 	target.apply(prop)
 	consume_property(prop)
 	AudioDirector.play("imprint", -4.0)
+	Settings.rumble(0.22, 0.34, 0.18)
 	Hints.did("imprint")
 	Hints.note_progress()
 	message.emit("Imprinted %s onto %s" % [Veil.prop_name(prop), target.label], "good")
@@ -400,6 +402,7 @@ func fire_emp() -> bool:
 	var r := GameState.emp_radius()
 	var pos := player.global_position if player else global_position
 	AudioDirector.play("emp", -3.0)
+	Settings.rumble(0.6, 0.9, 0.30)
 	Hints.did("emp")
 	emp_fired.emit(pos, r)
 	for n in get_tree().get_nodes_in_group("guardian"):

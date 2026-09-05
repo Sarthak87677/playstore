@@ -119,8 +119,12 @@ traversal almost entirely.
   rather than illustrations.
 * **No cloud layer.** Skies are a procedural gradient with a sun disc; weather is
   carried by particles and fog rather than by clouds.
-* **Controller vibration is wired to a setting but never triggered.** No haptic
-  events are fired, so the strength slider currently has no effect.
+* **Controller vibration fires, but no pad has ever felt it.** Haptics are
+  triggered on damage, death, hard and soft landings, the dodge, a reality
+  shift, an imprint and the EMP, all routed through one helper so the on/off
+  switch and the strength slider reach the pad (reduced camera shake damps
+  them too). The scaling is covered by the test suite, but the container has
+  no controller, so the actual feel is unverified.
 * **One save format version.** The loader has a migration path and a version
   field, but there has only ever been version 1, so migration is untested by
   anything other than its own unit check.

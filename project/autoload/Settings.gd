@@ -401,6 +401,25 @@ func _clamp_ranges() -> void:
 	resolution.x = clampi(resolution.x, 640, 7680)
 	resolution.y = clampi(resolution.y, 480, 4320)
 
+## Controller haptics. Every rumble in the game routes through here, so the
+## on/off switch and the strength slider actually reach the pad instead of
+## being stored and ignored. Reduced camera shake also damps haptics, since a
+## player who turns shake down is usually asking for less physical feedback.
+func haptic_magnitude(base: float) -> float:
+	if not vibration:
+		return 0.0
+	return clampf(base * vibration_strength * (1.0 - reduce_camera_shake * 0.7), 0.0, 1.0)
+
+func rumble(weak: float, strong: float, duration: float) -> int:
+	var w := haptic_magnitude(weak)
+	var st := haptic_magnitude(strong)
+	if w <= 0.0 and st <= 0.0:
+		return 0
+	var pads := Input.get_connected_joypads()
+	for d in pads:
+		Input.start_joy_vibration(int(d), w, st, duration)
+	return pads.size()
+
 func reset_to_defaults() -> void:
 	preset = Preset.HIGH; custom = {}
 	resolution = Vector2i(1920, 1080); window_mode = 0; vsync = true; fps_limit = 0

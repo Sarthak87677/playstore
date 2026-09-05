@@ -301,16 +301,19 @@ func _do_land() -> void:
 		if rolled:
 			AudioDirector.play_3d("roll", get_tree().current_scene, global_position, -6.0)
 			cam.shake(0.18)
+			Settings.rumble(0.35, 0.15, 0.16)
 			velocity += -global_transform.basis.z * 2.0
 		else:
 			var dmg := (impact - Tuning.LAND_HARD) * 5.4 * GameState.fall_damage_scale()
 			apply_damage(dmg, "fall")
 			AudioDirector.play_3d("land_hard", get_tree().current_scene, global_position, -4.0)
 			cam.shake(0.42)
+			Settings.rumble(0.5, 0.85, 0.28)
 			body.play_land(0.3)
 	elif impact >= Tuning.LAND_SOFT:
 		AudioDirector.play_3d("land_soft", get_tree().current_scene, global_position, -12.0)
 		cam.shake(0.10)
+		Settings.rumble(0.18, 0.0, 0.10)
 		body.play_land(0.15)
 	Hints.did("crouch", 1 if rolled else 0)
 
@@ -476,6 +479,7 @@ func _try_dodge() -> void:
 	mode = Mode.DODGE
 	AudioDirector.play_3d("dodge", get_tree().current_scene, global_position, -8.0)
 	cam.shake(0.12)
+	Settings.rumble(0.30, 0.10, 0.12)
 	Hints.did("dodge")
 	mode_changed.emit("dodge")
 
@@ -614,6 +618,8 @@ func apply_damage(amount: float, source: String = "") -> void:
 	took_damage.emit(amount, source)
 	shield_changed.emit(shield, shield_max)
 	cam.shake(clampf(amount * 0.012, 0.08, 0.5))
+	Settings.rumble(clampf(amount * 0.010, 0.15, 0.7),
+		clampf(amount * 0.014, 0.10, 0.9), 0.22)
 	if shield <= 0.0:
 		_die(source)
 	else:
@@ -629,6 +635,7 @@ func _die(source: String) -> void:
 	device.set_aiming(false)
 	device.end_scan()
 	AudioDirector.play("death", -3.0)
+	Settings.rumble(0.9, 1.0, 0.55)
 	GameState.note_death()
 	Log.info("Player died (%s)" % source)
 	died.emit()

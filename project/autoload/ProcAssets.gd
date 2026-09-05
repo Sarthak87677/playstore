@@ -192,7 +192,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 
 		# ---------------------------------------------------------- ground
 		"grass":
-			var m := _base(Color(0.518, 0.881, 0.414), 0.95, 0.0)
+			var m := _base(Color(0.20, 0.34, 0.16), 0.95, 0.0)
 			m.albedo_texture = noise_tex("grass_a", 31, 0.03, [
 				[0.0, Color(0.11, 0.20, 0.09)], [0.4, Color(0.19, 0.33, 0.14)],
 				[0.7, Color(0.27, 0.44, 0.19)], [1.0, Color(0.36, 0.52, 0.24)]], 4)
@@ -345,7 +345,10 @@ func _build_mat(name: String) -> StandardMaterial3D:
 
 		# ---------------------------------------------------------- organic
 		"foliage":
-			var m := _base(Color(0.522, 1, 0.435), 0.72, 0.0)
+			# Vegetation keeps its authored tint. Fitting these to a luma target
+			# pushes the green channel to full, which reads as neon rather than as
+			# leaves; the double-darkening these numbers look like is the point.
+			var m := _base(Color(0.24, 0.46, 0.20), 0.72, 0.0)
 			m.albedo_texture = noise_tex("fol_a", 181, 0.04, [
 				[0.0, Color(0.10, 0.24, 0.09)], [0.45, Color(0.21, 0.42, 0.17)],
 				[0.8, Color(0.32, 0.55, 0.22)], [1.0, Color(0.44, 0.66, 0.28)]], 4)
@@ -356,18 +359,18 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			return m
 		"foliage_bloom":
 			var m := mat("foliage").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.652, 1, 0.565)
+			m.albedo_color = Color(0.30, 0.60, 0.26)
 			m.emission_enabled = true
 			m.emission = Color(0.08, 0.24, 0.12)
 			m.emission_energy_multiplier = 0.10
 			return m
 		"foliage_dry":
 			var m := mat("foliage").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.957, 0.826, 0.391)
+			m.albedo_color = Color(0.44, 0.38, 0.18)
 			m.backlight = Color(0.22, 0.18, 0.08)
 			return m
 		"moss":
-			var m := _base(Color(0.556, 1, 0.444), 0.98, 0.0)
+			var m := _base(Color(0.20, 0.36, 0.16), 0.98, 0.0)
 			m.albedo_texture = noise_tex("moss_a", 191, 0.06, [
 				[0.0, Color(0.10, 0.20, 0.08)], [1.0, Color(0.28, 0.46, 0.20)]], 4)
 			m.normal_enabled = true

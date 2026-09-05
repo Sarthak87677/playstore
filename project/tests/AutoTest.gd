@@ -148,6 +148,27 @@ func _test_settings() -> void:
 	Settings.colorblind_states = false
 	Settings.reduce_camera_shake = 1.0
 	check("shake can be fully disabled", is_equal_approx(Settings.shake_scale(), 0.0))
+	# Controller haptics: the setting has to reach the pad, not just be stored.
+	# Reduced camera shake damps them too, so it is cleared first.
+	Settings.reduce_camera_shake = 0.0
+	Settings.vibration = true
+	Settings.vibration_strength = 1.0
+	var full := Settings.haptic_magnitude(0.8)
+	Settings.vibration_strength = 0.25
+	var quarter := Settings.haptic_magnitude(0.8)
+	Settings.vibration = false
+	var off := Settings.haptic_magnitude(0.8)
+	check("vibration strength scales haptics and the switch silences them",
+		is_equal_approx(full, 0.8) and quarter < full and quarter > 0.0 and off == 0.0,
+		"full=%.2f quarter=%.2f off=%.2f" % [full, quarter, off])
+	Settings.vibration = true
+	Settings.reduce_camera_shake = 1.0
+	check("reduced camera shake damps haptics too",
+		Settings.haptic_magnitude(0.8) < full * 0.5,
+		"%.2f vs %.2f" % [Settings.haptic_magnitude(0.8), full])
+	check("haptics do nothing with no pad attached", Settings.rumble(1.0, 1.0, 0.1) == 0)
+	Settings.reduce_camera_shake = 0.0
+	Settings.vibration_strength = 0.8
 	Settings.reduce_camera_shake = 0.0
 
 func _all_actions_bound() -> bool:
