@@ -46,7 +46,7 @@ godot --headless --path project -- --autotest --chapters=1,2,3,4,5,6,7,8
 ### Source tree
 
 ```
-=== RESULT: 369/369 checks passed, 0 failed ===
+=== RESULT: 372/372 checks passed, 0 failed ===
 ```
 
 ### Packaged build
@@ -57,7 +57,7 @@ the source tree, to prove the export packages every resource:
 
 ```
 ./build/verify/VEILFORGE_verify.x86_64 --headless -- --autotest --chapters=1,2,3,4,5,6,7,8
-=== RESULT: 369/369 checks passed, 0 failed ===
+=== RESULT: 372/372 checks passed, 0 failed ===
 ```
 
 No missing-resource, failed-load or shader-compile errors in the packaged run.
@@ -66,7 +66,7 @@ No missing-resource, failed-load or shader-compile errors in the packaged run.
 
 | Area | Checks | Result |
 | --- | --- | --- |
-| Settings: input map, graphics presets, audio buses, persistence round-trip, colour-blind palette, shake disable | 9 | pass |
+| Settings: input map, graphics presets, audio buses, persistence round-trip, colour-blind palette, shake disable, controller-haptic scaling and gating | 12 | pass |
 | Saves: write, read back, corrupt-recovers-from-backup, erase, missing data, hand-mangled types | 10 | pass |
 | Progression: XP curve, levels, upgrade gating and tiers, derived stats, chain multiplier, results scoring, ranks, mastery, NG+ | 23 | pass |
 | Procedural audio: buffer generation, loop points, per-state difference, bus response, cache bounds | 5 | pass |
@@ -187,7 +187,7 @@ and is fixed in the current build.
 | Pause, settings and accessibility options work | Pass | Pause halts the game and resumes; the pause menu opens Upgrades, Field Records and Settings with connected, correctly sized controls; preset application, audio bus levels, settings round-trip, colour-blind palette, shake disable |
 | Missing save data is handled safely | Pass | "missing save handled safely", "mangled types sanitised", "corrupt save recovers from backup", "continue finds no slot to load" |
 | The game can be closed and resumed correctly | Pass | Close-and-resume test: profile dropped from memory, reloaded from disk, resumed 0.3 m from the checkpoint |
-| No unavoidable crashes or progression blockers | Pass | 369/369 with no crash in eight full chapter runs, twice (source and packaged) |
+| No unavoidable crashes or progression blockers | Pass | 372/372 with no crash in eight full chapter runs, twice (source and packaged) |
 | No required asset missing from the packaged build | Pass | Full suite run against the packaged binary with no load errors |
 | No network connection is attempted | Pass | `strace`: zero internet sockets, zero `connect()` calls |
 | The distributable build matches the editable project | Pass | The ZIP is produced by exporting `project/` directly; the verification binary is the same export with the same content filter |
@@ -208,8 +208,11 @@ Stated plainly, because these are the real gaps:
   reported as solvable.
 * **Screens are checked, but only some frames were looked at.** The harness
   asserts that every panel is wired up and occupies a real rectangle, and the
-  five front-end screens plus Chapter 1 in all three states were rendered and
-  inspected by eye. The other seven chapters have one inspected frame each. A
-  layout that is present and correctly sized but ugly would still pass.
+  five front-end screens plus Chapter 1 at four vantage points in all three
+  states were rendered and inspected by eye. The other seven chapters have one
+  inspected frame each (in `docs/screenshots/`). A layout that is present and
+  correctly sized but ugly would still pass.
+* **Controller haptics fire but were never felt.** The scaling and the on/off
+  gate are asserted; no pad exists in this container.
 
 See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the full list.

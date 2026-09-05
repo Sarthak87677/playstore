@@ -97,6 +97,16 @@ refers to whatever you are nearest. It is never required.
 
 ---
 
+## Controller vibration
+
+Settings → Controls has an on/off switch and a strength slider. Haptics fire on
+damage and death, hard and soft landings, the dodge, a reality shift, an imprint
+and the EMP. Turning **Reduce camera shake** up also damps them, on the
+assumption that someone asking for less camera movement wants less physical
+feedback as well.
+
+---
+
 ## Hold vs toggle
 
 Settings → Gameplay has independent hold/toggle switches for **Aim Field**,

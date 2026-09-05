@@ -34,8 +34,12 @@ it. This is the whole game in one row:
 | ![Memory](docs/screenshots/10-ch01-fissure-memory.png) | ![Ruin](docs/screenshots/11-ch01-fissure-ruin.png) | ![Bloom](docs/screenshots/12-ch01-fissure-bloom.png) |
 | ![Valley in Memory](docs/screenshots/13-ch01-valley-memory.png) | ![Valley in Ruin](docs/screenshots/14-ch01-valley-ruin.png) | ![Valley in Bloom](docs/screenshots/15-ch01-valley-bloom.png) |
 
-Captured from the running game with `--autotest --shots` on a software Vulkan
-rasteriser, so these are dimmer and softer than the same frames on a real GPU.
+One frame from each of the other seven chapters is in
+[`docs/screenshots/`](docs/screenshots/).
+
+All of these were captured from the running game with `--autotest --shots` on a
+software Vulkan rasteriser, so they are dimmer and softer than the same frames
+on a real GPU.
 
 ---
 
