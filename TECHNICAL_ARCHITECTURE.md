@@ -37,6 +37,11 @@ No third-party art or audio ships with the game. There is no `.png`, `.wav`,
 * **Everything is cached** by parameter key, including collision shapes, so a
   chapter placing 130 rocks builds ten meshes and ten convex hulls, not 130 of
   each.
+* **Where a material carries an albedo texture, its `albedo_color` is a
+  near-white hue shift, not a second colour.** Tinting an already-coloured
+  texture with a mid-dark colour multiplies the two and crushes the surface;
+  that mistake turned the terrain near-black once and every prop near-black a
+  second time before it was found in a rendered capture.
 
 ### `autoload/ProcAudio.gd` — every sound in the game
 
@@ -177,6 +182,13 @@ It also covers settings round-tripping, the graphics presets, audio bus levels,
 save writing, backup recovery, corrupt and type-mangled saves, the XP curve,
 upgrade gating, derived stats, the chain multiplier, results scoring and New
 Game+.
+
+It opens every front-end and pause-menu screen and asserts two separate things
+about each: that every control is connected to a handler, and that the panel
+occupies a **non-degenerate rectangle** with content of real extent inside it.
+The second assertion exists because the first one passed while six screens were
+rendering at 0×0 — `set_anchors_preset()` keeps the existing offsets by
+default, so a full-screen panel parented to a Control collapses silently.
 
 It is excluded from release exports and guarded at the entry point, so a shipped
 build cannot reach it.

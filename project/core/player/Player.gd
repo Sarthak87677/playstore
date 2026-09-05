@@ -602,9 +602,15 @@ func _update_survival(dt: float) -> void:
 func apply_damage(amount: float, source: String = "") -> void:
 	if mode == Mode.DEAD or invulnerable or _iframes > 0.0 or amount <= 0.0:
 		return
+	# Only damage the shield actually absorbs is recorded. A lethal hazard deals
+	# 9999 so that nothing survives it; recording that verbatim scored a single
+	# fall into a pit at -24000, which zeroed the chapter total and locked the
+	# rank to C however well the rest of the chapter was played. The death
+	# itself is the penalty for falling in.
+	var absorbed := minf(amount, shield)
 	shield = maxf(0.0, shield - amount)
 	_regen_delay = Tuning.SHIELD_REGEN_DELAY
-	GameState.note_damage(amount)
+	GameState.note_damage(absorbed)
 	took_damage.emit(amount, source)
 	shield_changed.emit(shield, shield_max)
 	cam.shake(clampf(amount * 0.012, 0.08, 0.5))

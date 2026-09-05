@@ -576,8 +576,23 @@ func _test_chapter(idx: int) -> void:
 	var sh0 := pl.shield
 	pl.apply_damage(25.0, "autotest")
 	check("damage reduces shield", pl.shield < sh0, "%.0f -> %.0f" % [sh0, pl.shield])
+	# Score the run as if it had gone well, then kill the player outright and
+	# score it again. A lethal hazard deals 9999 damage so that nothing survives
+	# it; recording that verbatim scored a single fall into a pit at -24000,
+	# which zeroed the chapter total and pinned the rank to C however well the
+	# rest of the chapter was played. Only damage the shield absorbs is counted
+	# now, so a death is a real cost and not an erasure.
+	GameState.run.puzzles = 5
+	GameState.run.puzzles_perfect = 5
+	GameState.run.fragments = 3
+	GameState.run.new_scans = 12
+	var alive_total: int = int(GameState.compute_results(idx).total)
 	pl.apply_damage(9999.0, "autotest")
 	check("lethal damage kills", not pl.is_alive())
+	var dead_total: int = int(GameState.compute_results(idx).total)
+	check("dying costs score without erasing the run",
+		dead_total < alive_total and dead_total > alive_total / 2,
+		"%d -> %d" % [alive_total, dead_total])
 	await _wait(3.4)
 	check("respawn restores control", pl.is_alive() and pl.shield > 0.0)
 
@@ -651,6 +666,9 @@ func _test_menus() -> void:
 		if opened:
 			check("'%s' panel has working controls" % panel,
 				_all_buttons_connected(menu._sub))
+			if panel != "quit":
+				check("'%s' panel is laid out" % panel,
+					_panel_is_laid_out(menu._sub))
 		menu._close()
 		await _wait(0.15)
 
@@ -669,6 +687,25 @@ func _test_menus() -> void:
 		"%d sliders, %d dropdowns, %d toggles" % [sliders, options, checks])
 	menu._close()
 	await _wait(0.2)
+
+## A panel that reports zero size draws nothing, however well its buttons are
+## wired. `set_anchors_preset()` keeps the existing offsets by default, so a
+## full-screen panel parented to a Control silently collapsed to 0x0 — every
+## connectivity check still passed. This is the assertion that catches it.
+func _panel_is_laid_out(panel: Node) -> bool:
+	if not (panel is Control):
+		return false
+	var vp := get_viewport().get_visible_rect().size
+	var r := (panel as Control).get_rect()
+	if r.size.x < vp.x * 0.5 or r.size.y < vp.y * 0.5:
+		Log.warn("Panel %s is %s in a %s viewport" % [panel.name, r.size, vp])
+		return false
+	# Content, not just the shell: something inside must have real extent too.
+	var widest := 0.0
+	for n in _walk(panel):
+		if n is Control:
+			widest = maxf(widest, (n as Control).get_rect().size.x)
+	return widest > vp.x * 0.25
 
 ## Every interactive control must be wired to something. Note that CheckButton
 ## and OptionButton subclass Button but report through `toggled` and
@@ -715,6 +752,8 @@ func _test_pause_menu(idx: int) -> void:
 		if ok:
 			check("'%s' controls are connected" % panel,
 				_all_buttons_connected(game.pause_menu._sub))
+			check("'%s' is laid out" % panel,
+				_panel_is_laid_out(game.pause_menu._sub))
 		game.pause_menu._close_panel()
 		await _wait(0.15)
 	game.resume()

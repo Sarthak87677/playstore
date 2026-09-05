@@ -21,8 +21,11 @@ echo "==> Importing project"
 "$GODOT" --headless --path "$ROOT/project" --editor --quit >/dev/null 2>&1 || true
 
 echo "==> Running the automated playtest before packaging"
+# Keep the whole transcript: the per-chapter timings and node counts quoted in
+# QA_REPORT.md come from here, and tail -3 threw them away.
+mkdir -p "$ROOT/build"
 "$GODOT" --headless --path "$ROOT/project" -- \
-    --autotest --chapters=1,2,3,4,5,6,7,8 | tail -3
+    --autotest --chapters=1,2,3,4,5,6,7,8 | tee "$ROOT/build/autotest.log" | tail -3
 
 echo "==> Exporting Windows x86-64"
 rm -rf "$OUT_DIR"

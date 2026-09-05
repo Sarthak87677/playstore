@@ -728,8 +728,11 @@ func load_flags(flags: Dictionary) -> void:
 func shot_spots() -> Array:
 	return [
 		{"name": "valley", "pos": on_ground(26, 46, 16.0), "look": Vector3(0, 4, -10)},
-		{"name": "bridge", "pos": Vector3(22, _h(0, 27) + 9.0, 30.0),
-			"look": Vector3(0, _h(0, 18) + 1.0, 16.0)},
+		# Stand off the near lip and look down the span. The camera height must
+		# come from the ground under the camera, not from the far side, or the
+		# vantage ends up buried in the valley wall.
+		{"name": "bridge", "pos": on_ground(21, 33, 7.5),
+			"look": Vector3(0, (_h(0, 27.0) + _h(0, 9.0)) * 0.5 + 0.6, 18.0)},
 		{"name": "relay", "pos": on_ground(24, -62, 12.0), "look": on_ground(0, -80, 12.0)},
 	]
 

@@ -127,11 +127,14 @@ func mat_variant(name: String, tint: Color, rough_add: float = 0.0) -> StandardM
 	_mat[key] = m
 	return m
 
-## Where a material also carries an `albedo_texture`, that texture already holds
-## the colour, so this tint stays near-white and only shifts the hue. Tinting a
-## coloured texture with a mid-dark colour multiplies the two and crushes the
-## surface — the same mistake the terrain shader made, where it turned every
-## ground surface near-black.
+## Where a material also carries an `albedo_texture`, the two multiply, so this
+## tint is chosen against that texture rather than picked on its own: it carries
+## the hue, and its brightness is set so that tint x texture lands on a sensible
+## mean albedo for the surface. Getting this wrong in either direction is
+## visible from across the level — a mid-dark tint over an already-coloured
+## texture crushed every prop to near-black (the same mistake the terrain shader
+## made), and over-correcting to near-white blew Nacre City's facades out to
+## flat paper and turned the forest neon.
 func _base(albedo: Color, rough: float, metal: float) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = albedo
@@ -151,7 +154,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 	match name:
 		# ---------------------------------------------------------- stone / rock
 		"rock":
-			var m := _base(Color(0.92, 0.885, 0.832), 0.88, 0.0)
+			var m := _base(Color(0.736, 0.708, 0.666), 0.88, 0.0)
 			m.albedo_texture = noise_tex("rock_a", 11, 0.009, [
 				[0.0, Color(0.20, 0.19, 0.18)], [0.42, Color(0.40, 0.39, 0.37)],
 				[0.72, Color(0.55, 0.53, 0.50)], [1.0, Color(0.66, 0.64, 0.60)]], 5)
@@ -167,17 +170,17 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			return _tri(m, 0.28)
 		"rock_dark":
 			var m := mat("rock").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.425, 0.416, 0.442)
+			m.albedo_color = Color(0.34, 0.333, 0.354)
 			m.roughness = 0.92
 			return m
 		"rock_wet":
 			var m := mat("rock").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.495, 0.513, 0.531)
+			m.albedo_color = Color(0.397, 0.411, 0.425)
 			m.roughness = 0.34
 			m.metallic_specular = 0.7
 			return m
 		"cliff":
-			var m := _base(Color(0.92, 0.869, 0.818), 0.94, 0.0)
+			var m := _base(Color(1, 0.944, 0.889), 0.94, 0.0)
 			m.albedo_texture = noise_tex("cliff_a", 21, 0.006, [
 				[0.0, Color(0.17, 0.16, 0.15)], [0.35, Color(0.33, 0.31, 0.29)],
 				[0.65, Color(0.46, 0.44, 0.41)], [1.0, Color(0.58, 0.56, 0.52)]], 6,
@@ -189,7 +192,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 
 		# ---------------------------------------------------------- ground
 		"grass":
-			var m := _base(Color(0.541, 0.92, 0.433), 0.95, 0.0)
+			var m := _base(Color(0.518, 0.881, 0.414), 0.95, 0.0)
 			m.albedo_texture = noise_tex("grass_a", 31, 0.03, [
 				[0.0, Color(0.11, 0.20, 0.09)], [0.4, Color(0.19, 0.33, 0.14)],
 				[0.7, Color(0.27, 0.44, 0.19)], [1.0, Color(0.36, 0.52, 0.24)]], 4)
@@ -197,7 +200,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("grass_a", 31, 0.06, 5.0, 4)
 			return _tri(m, 0.5)
 		"dirt":
-			var m := _base(Color(0.92, 0.742, 0.564), 0.96, 0.0)
+			var m := _base(Color(1, 0.806, 0.613), 0.96, 0.0)
 			m.albedo_texture = noise_tex("dirt_a", 41, 0.028, [
 				[0.0, Color(0.17, 0.13, 0.10)], [0.5, Color(0.30, 0.24, 0.18)],
 				[1.0, Color(0.44, 0.36, 0.27)]], 4)
@@ -205,7 +208,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("dirt_a", 41, 0.05, 6.0, 4)
 			return _tri(m, 0.42)
 		"sand":
-			var m := _base(Color(0.92, 0.779, 0.537), 0.90, 0.0)
+			var m := _base(Color(0.806, 0.683, 0.47), 0.90, 0.0)
 			m.albedo_texture = noise_tex("sand_a", 51, 0.05, [
 				[0.0, Color(0.58, 0.48, 0.33)], [0.5, Color(0.74, 0.63, 0.44)],
 				[1.0, Color(0.86, 0.76, 0.56)]], 3)
@@ -213,7 +216,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("sand_a", 51, 0.09, 3.2, 3)
 			return _tri(m, 0.6)
 		"snow":
-			var m := _base(Color(0.845, 0.873, 0.92), 0.55, 0.0)
+			var m := _base(Color(0.63, 0.651, 0.686), 0.55, 0.0)
 			m.albedo_texture = noise_tex("snow_a", 61, 0.04, [
 				[0.0, Color(0.78, 0.83, 0.92)], [0.6, Color(0.92, 0.95, 0.99)],
 				[1.0, Color(1.0, 1.0, 1.0)]], 3)
@@ -224,14 +227,14 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.rim_tint = 0.6
 			return _tri(m, 0.45)
 		"ash":
-			var m := _base(Color(0.92, 0.885, 0.885), 0.98, 0.0)
+			var m := _base(Color(0.581, 0.558, 0.558), 0.98, 0.0)
 			m.albedo_texture = noise_tex("ash_a", 71, 0.035, [
 				[0.0, Color(0.14, 0.13, 0.13)], [1.0, Color(0.34, 0.33, 0.32)]], 4)
 			return _tri(m, 0.5)
 
 		# ---------------------------------------------------------- built
 		"concrete":
-			var m := _base(Color(0.92, 0.92, 0.878), 0.86, 0.0)
+			var m := _base(Color(0.623, 0.623, 0.595), 0.86, 0.0)
 			m.albedo_texture = noise_tex("conc_a", 81, 0.015, [
 				[0.0, Color(0.38, 0.38, 0.37)], [0.45, Color(0.55, 0.55, 0.53)],
 				[0.8, Color(0.64, 0.64, 0.62)], [1.0, Color(0.70, 0.70, 0.67)]], 4)
@@ -243,11 +246,11 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			return _tri(m, 0.24)
 		"concrete_aged":
 			var m := mat("concrete").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.725, 0.725, 0.683)
+			m.albedo_color = Color(0.491, 0.491, 0.463)
 			m.roughness = 0.95
 			return m
 		"metal":
-			var m := _base(Color(0.851, 0.879, 0.92), 0.42, 0.92)
+			var m := _base(Color(0.777, 0.802, 0.84), 0.42, 0.92)
 			m.albedo_texture = noise_tex("metal_a", 91, 0.02, [
 				[0.0, Color(0.42, 0.44, 0.47)], [0.5, Color(0.62, 0.64, 0.67)],
 				[1.0, Color(0.78, 0.80, 0.83)]], 3)
@@ -257,7 +260,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 				[0.0, Color(0.22, 0.22, 0.22)], [1.0, Color(0.72, 0.72, 0.72)]], 3)
 			return _tri(m, 0.3)
 		"metal_rust":
-			var m := _base(Color(0.92, 0.584, 0.372), 0.82, 0.45)
+			var m := _base(Color(1, 0.635, 0.404), 0.82, 0.45)
 			m.albedo_texture = noise_tex("rust_a", 101, 0.022, [
 				[0.0, Color(0.20, 0.13, 0.09)], [0.35, Color(0.42, 0.24, 0.13)],
 				[0.7, Color(0.58, 0.34, 0.18)], [1.0, Color(0.36, 0.30, 0.27)]], 5)
@@ -265,14 +268,14 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("rust_a", 101, 0.05, 6.0, 4)
 			return _tri(m, 0.34)
 		"metal_dark":
-			var m := _base(Color(0.789, 0.821, 0.92), 0.38, 0.95)
+			var m := _base(Color(0.573, 0.597, 0.668), 0.38, 0.95)
 			m.albedo_texture = noise_tex("mdark_a", 111, 0.025, [
 				[0.0, Color(0.09, 0.10, 0.11)], [1.0, Color(0.24, 0.25, 0.28)]], 3)
 			m.normal_enabled = true
 			m.normal_texture = normal_tex("mdark_a", 111, 0.07, 2.0, 3)
 			return _tri(m, 0.35)
 		"brass":
-			var m := _base(Color(0.92, 0.716, 0.332), 0.30, 0.95)
+			var m := _base(Color(1, 0.778, 0.361), 0.30, 0.95)
 			m.albedo_texture = noise_tex("brass_a", 121, 0.03, [
 				[0.0, Color(0.50, 0.38, 0.16)], [1.0, Color(0.86, 0.70, 0.34)]], 3)
 			return _tri(m, 0.3)
@@ -293,7 +296,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("glassb", 131, 0.08, 9.0, 4)
 			return m
 		"wood":
-			var m := _base(Color(0.92, 0.654, 0.409), 0.88, 0.0)
+			var m := _base(Color(1, 0.711, 0.444), 0.88, 0.0)
 			m.albedo_texture = noise_tex("wood_a", 141, 0.006, [
 				[0.0, Color(0.20, 0.13, 0.08)], [0.45, Color(0.34, 0.23, 0.14)],
 				[1.0, Color(0.48, 0.34, 0.20)]], 3, TEX_SIZE,
@@ -302,7 +305,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("wood_a", 141, 0.02, 5.0, 3)
 			return _tri(m, 0.35)
 		"bark":
-			var m := _base(Color(0.92, 0.736, 0.552), 0.95, 0.0)
+			var m := _base(Color(1, 0.8, 0.6), 0.95, 0.0)
 			m.albedo_texture = noise_tex("bark_a", 151, 0.012, [
 				[0.0, Color(0.12, 0.10, 0.08)], [0.4, Color(0.25, 0.20, 0.15)],
 				[0.8, Color(0.36, 0.29, 0.21)], [1.0, Color(0.44, 0.37, 0.28)]], 5,
@@ -318,7 +321,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.backlight = Color(0.5, 0.34, 0.12)
 			return m
 		"tile":
-			var m := _base(Color(0.869, 0.894, 0.92), 0.28, 0.05)
+			var m := _base(Color(0.598, 0.616, 0.633), 0.28, 0.05)
 			m.albedo_texture = noise_tex("tile_a", 161, 0.05, [
 				[0.0, Color(0.52, 0.55, 0.58)], [0.5, Color(0.70, 0.72, 0.74)],
 				[1.0, Color(0.82, 0.84, 0.86)]], 3)
@@ -326,7 +329,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("tile_a", 161, 0.05, 3.0, 3)
 			return _tri(m, 0.5)
 		"nacre":
-			var m := _base(Color(0.789, 0.841, 0.92), 0.18, 0.30)
+			var m := _base(Color(0.555, 0.592, 0.647), 0.18, 0.30)
 			m.albedo_texture = noise_tex("nacre_a", 171, 0.02, [
 				[0.0, Color(0.68, 0.76, 0.86)], [0.35, Color(0.88, 0.84, 0.92)],
 				[0.65, Color(0.80, 0.90, 0.88)], [1.0, Color(0.94, 0.92, 0.86)]], 4)
@@ -342,7 +345,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 
 		# ---------------------------------------------------------- organic
 		"foliage":
-			var m := _base(Color(0.48, 0.92, 0.4), 0.72, 0.0)
+			var m := _base(Color(0.522, 1, 0.435), 0.72, 0.0)
 			m.albedo_texture = noise_tex("fol_a", 181, 0.04, [
 				[0.0, Color(0.10, 0.24, 0.09)], [0.45, Color(0.21, 0.42, 0.17)],
 				[0.8, Color(0.32, 0.55, 0.22)], [1.0, Color(0.44, 0.66, 0.28)]], 4)
@@ -353,18 +356,18 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			return m
 		"foliage_bloom":
 			var m := mat("foliage").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.6, 1, 0.52)
+			m.albedo_color = Color(0.652, 1, 0.565)
 			m.emission_enabled = true
 			m.emission = Color(0.08, 0.24, 0.12)
 			m.emission_energy_multiplier = 0.10
 			return m
 		"foliage_dry":
 			var m := mat("foliage").duplicate() as StandardMaterial3D
-			m.albedo_color = Color(0.88, 0.76, 0.36)
+			m.albedo_color = Color(0.957, 0.826, 0.391)
 			m.backlight = Color(0.22, 0.18, 0.08)
 			return m
 		"moss":
-			var m := _base(Color(0.511, 0.92, 0.409), 0.98, 0.0)
+			var m := _base(Color(0.556, 1, 0.444), 0.98, 0.0)
 			m.albedo_texture = noise_tex("moss_a", 191, 0.06, [
 				[0.0, Color(0.10, 0.20, 0.08)], [1.0, Color(0.28, 0.46, 0.20)]], 4)
 			m.normal_enabled = true

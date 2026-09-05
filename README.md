@@ -18,6 +18,27 @@ no microtransactions, no loot boxes. The game opens no sockets of any kind.
 
 ---
 
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Main menu](docs/screenshots/01-main-menu.png) | ![Chapter select](docs/screenshots/02-chapter-select.png) |
+| ![Settings](docs/screenshots/03-settings.png) | ![Upgrades](docs/screenshots/04-upgrades.png) |
+
+The same fissure in Chapter 1, in all three realities. The Memory span is a
+surface you walk on; in Ruin it is not there at all, and the collision goes with
+it. This is the whole game in one row:
+
+| Memory | Ruin | Bloom |
+| --- | --- | --- |
+| ![Memory](docs/screenshots/10-ch01-fissure-memory.png) | ![Ruin](docs/screenshots/11-ch01-fissure-ruin.png) | ![Bloom](docs/screenshots/12-ch01-fissure-bloom.png) |
+| ![Valley in Memory](docs/screenshots/13-ch01-valley-memory.png) | ![Valley in Ruin](docs/screenshots/14-ch01-valley-ruin.png) | ![Valley in Bloom](docs/screenshots/15-ch01-valley-bloom.png) |
+
+Captured from the running game with `--autotest --shots` on a software Vulkan
+rasteriser, so these are dimmer and softer than the same frames on a real GPU.
+
+---
+
 ## Running the game (Windows)
 
 1. Unzip `VEILFORGE-Windows-x86_64.zip` anywhere you like.

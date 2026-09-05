@@ -111,6 +111,9 @@ func begin_play(mode: String) -> void:
 func build_world() -> void:
 	await get_tree().process_frame
 
+## Fill light and ambient are deliberately generous. A sun-only key at these
+## pitches drops shadowed ground to near-black, which reads as dirt on the
+## grass rather than as shadow, and the brief asks for no crushed blacks.
 func build_palettes() -> Array:
 	var mem: Color = info.get("sky_memory", Color(0.7, 0.8, 0.9))
 	var ruin: Color = info.get("sky_ruin", Color(0.4, 0.42, 0.48))
@@ -120,22 +123,22 @@ func build_palettes() -> Array:
 		Atmosphere.palette(mem.darkened(0.42), mem, mem.lightened(0.06),
 			Color(1.0, 0.97, 0.90), 2.6, 0.0010, 0.0045,
 			{"saturation": 0.96, "contrast": 1.06, "glow": 0.5, "exposure": 1.0,
-			 "sun_pitch": -54.0, "sun_yaw": 28.0, "fill_energy": 0.26,
-			 "ambient": 0.80, "fog_begin": 70.0, "fog_end": 900.0, "sky_energy": 0.95,
+			 "sun_pitch": -54.0, "sun_yaw": 28.0, "fill_energy": 0.34,
+			 "ambient": 0.90, "fog_begin": 70.0, "fog_end": 900.0, "sky_energy": 0.95,
 			 "fog_aerial": 0.05}),
 		# RUIN - heavy, desaturated, low sun. Air you can see.
 		Atmosphere.palette(ruin.darkened(0.5), ruin, ruin.lightened(0.02),
 			Color(0.94, 0.89, 0.83), 1.5, 0.0022, 0.0090,
 			{"saturation": 0.80, "contrast": 1.14, "glow": 0.30, "exposure": 0.95,
-			 "sun_pitch": -30.0, "sun_yaw": 64.0, "fill_energy": 0.14,
-			 "ambient": 0.62, "fog_begin": 34.0, "fog_end": 560.0, "sky_energy": 0.7,
+			 "sun_pitch": -30.0, "sun_yaw": 64.0, "fill_energy": 0.26,
+			 "ambient": 0.78, "fog_begin": 34.0, "fog_end": 560.0, "sky_energy": 0.7,
 			 "fog_aerial": 0.10}),
 		# BLOOM - warm, saturated, dappled. Mid fog for depth between canopies.
 		Atmosphere.palette(bloom.darkened(0.44), bloom, bloom.lightened(0.05),
 			Color(1.0, 0.98, 0.88), 2.2, 0.0016, 0.0070,
 			{"saturation": 1.16, "contrast": 1.08, "glow": 0.55, "exposure": 1.0,
-			 "sun_pitch": -48.0, "sun_yaw": 16.0, "fill_energy": 0.24,
-			 "ambient": 0.78, "fog_begin": 50.0, "fog_end": 700.0, "sky_energy": 0.9,
+			 "sun_pitch": -48.0, "sun_yaw": 16.0, "fill_energy": 0.34,
+			 "ambient": 0.90, "fog_begin": 50.0, "fog_end": 700.0, "sky_energy": 0.9,
 			 "fog_aerial": 0.07}),
 	]
 
