@@ -20,6 +20,9 @@ func _ready() -> void:
 	_build_backdrop()
 	_build_ui()
 	AudioDirector.start_menu_music()
+	# The build's smoke test greps the session log for this line: it is the
+	# proof that a shipped export actually reaches a playable front end.
+	Log.info("Main menu ready")
 
 # ================================================================ backdrop
 func _build_backdrop() -> void:

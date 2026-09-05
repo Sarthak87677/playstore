@@ -42,6 +42,13 @@ with Godot's official 4.3 Windows export template and verified as a
 Wine is not available in this environment, so the `.exe` itself has not been
 launched.
 
+This gap is not theoretical: the first build handed to a player opened a window
+and drew nothing, because a type annotation naming a class from `tests/` made
+the boot script fail to parse once `tests/` was excluded from the export. Every
+automated check passed, because they all ran against a build that still had the
+file. The build now also exports and boots a binary with the **release**
+filters and requires it to reach the main menu.
+
 What *was* verified is the packaged content: an equivalent Linux export was
 produced from the same project with the same `all_resources` export filter, and
 the full automated playtest was run **against that packaged binary** rather than

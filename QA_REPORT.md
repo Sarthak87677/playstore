@@ -53,7 +53,10 @@ godot --headless --path project -- --autotest --chapters=1,2,3,4,5,6,7,8
 
 The same suite was then run **against an exported, packaged binary** — same
 project, same `all_resources` export filter, PCK embedded — rather than against
-the source tree, to prove the export packages every resource:
+the source tree, to prove the export packages every resource. Note what this
+does *not* prove: this binary keeps `tests/` so the harness can run, which is
+not what ships. That gap hid a release-breaking bug once (see §5), and is now
+closed by the ship-check below:
 
 ```
 ./build/verify/VEILFORGE_verify.x86_64 --headless -- --autotest --chapters=1,2,3,4,5,6,7,8
@@ -61,6 +64,20 @@ the source tree, to prove the export packages every resource:
 ```
 
 No missing-resource, failed-load or shader-compile errors in the packaged run.
+
+### Shipped configuration
+
+A third export uses **exactly the release filters** — `tests/*` excluded, as the
+Windows build is — and is started with no flags at all. It has to reach a live
+front end:
+
+```
+./build/shipcheck/VEILFORGE_shipcheck.x86_64 --headless
+  → "Main menu ready" in the session log
+```
+
+This runs inside `tools/build_windows.sh` and **fails the build** if the menu is
+not reached, so a release that cannot start can no longer be packaged.
 
 ### Coverage by area
 
@@ -151,6 +168,7 @@ and is fixed in the current build.
 | --- | --- | --- |
 | **Critical** | The terrain heightfield's triangles were wound counter-clockwise, so Godot back-face culled the entire ground. Every prop appeared to float in an empty sky. | Rendered capture pass — invisible in headless testing, since no check looks at pixels |
 | **Critical** | `HUD.toast()` trimmed old toasts with `while get_child_count() > 7: get_child(0).queue_free()`. `queue_free()` does not detach the child until end of frame, so the loop never terminated and flooded the SceneTree deletion queue — 14 GB RSS in ~2 minutes, then an OOM kill. This would have frozen the shipped game the first time eight notifications appeared. | Full-chapter test dying with SIGKILL; located by bisecting with RSS sampling |
+| **Critical** | `Boot.gd` typed a variable as `AutoTest`, a class in `tests/`. The release export excludes `tests/*`, so that annotation could not resolve and **the whole script failed to parse**, taking the main scene with it: the shipped game opened a window and drew nothing, forever. The runtime `if script == null` guard next to it was useless — the failure is at parse time, before any of its lines run. Reported from a player's machine, not found here. | A player's console output. The suite could not see it: it ran against an export that still contained `tests/`, so the class always resolved. The build now exports a Linux binary with the **release** filters, boots it with no flags and requires it to log `Main menu ready`; reverting the fix was confirmed to fail that check |
 | **Critical** | A lethal hazard deals 9999 damage so that nothing survives it, and `note_damage` recorded that verbatim. One fall into Chapter 1's fissure scored -23998, which zeroed the chapter total and pinned the rank to C however well the rest of the chapter was played — a permanent, unrecoverable penalty for an ordinary mistake the game already punishes with a death and a respawn. Only damage the shield actually absorbs is recorded now. | Reading a captured results screen: `Damage penalty -24378` against positive scores in the hundreds. The harness now scores a run, kills the player outright and scores it again; reverting the fix was confirmed to fail it (6754 -> 0, exit 1) |
 | **Critical** | Every full-screen panel used `set_anchors_preset(PRESET_FULL_RECT)`, which keeps the existing offsets by default. Panels parented to a Control therefore stayed 0×0: Settings, Upgrades, Field Records, Chapter Select, the results screen and the HUD's own containers all collapsed — backgrounds absent, content clipped to nothing. 59 call sites across 10 files, now `set_anchors_and_offsets_preset`. | Rendered front-end capture pass — headless checks asserted the buttons existed and were connected, which they were; nothing looked at the rectangle they occupied. The harness now asserts panel geometry, and reintroducing the bug in one file was confirmed to fail the suite (2 failures, exit 1) |
 | High | The main menu and the pause menu drew their own button list on top of any sub-panel they opened, so Settings and Upgrades appeared behind the menu. The menu list is now hidden while a panel is open. | Rendered front-end capture pass |
@@ -170,6 +188,7 @@ and is fixed in the current build.
 | Medium | Depth of field blurred everything past 34 m, including landmarks the player navigates by. | Rendered capture pass |
 | Low | Islands in chapter 6 were smooth mathematical cones with no flat ground for structures. | Rendered capture pass |
 | Low | `Settings.event_display_name` called a display-server function unavailable in headless mode. | Headless test errors |
+| Low | `application/config/windows_native_icon` pointed at `res://icon.ico`, which did not exist, so Windows logged an icon error on every launch. The icon is now generated and is also the executable's icon. | A player's console output |
 | Low | Several materials (nacre, snow, sand) read as near-white on screen. | Rendered capture pass |
 
 ---
@@ -178,7 +197,7 @@ and is fixed in the current build.
 
 | Requirement | Status | Evidence |
 | --- | --- | --- |
-| A new player can install, launch and finish the game offline | **Partly verified** | All eight chapters complete in the packaged binary with zero network activity. The Windows `.exe` itself has not been launched — no Windows host or Wine here (see KNOWN_LIMITATIONS §2) |
+| A new player can install, launch and finish the game offline | **Partly verified** | All eight chapters complete in the packaged binary with zero network activity, and an export with the release filters reaches the main menu from a cold start. The Windows `.exe` itself is still not launched here — no Windows host or Wine (see KNOWN_LIMITATIONS §2). A player's machine has confirmed the engine starts and the front end loads |
 | New Game, Continue, saves and chapter unlocking work | Pass | Save/load/corruption/erase checks; "next chapter unlocked" per chapter; close-and-resume test |
 | Every chapter can be completed without developer commands | Pass | Each chapter completed through its own puzzle and interaction logic; `chapter completion recorded` ×8 |
 | All three reality states affect actual gameplay | Pass | "all veil subjects switch cleanly" and "reality states change collision" pass in all 8 chapters |

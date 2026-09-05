@@ -39,7 +39,12 @@ func _start_autotest(args: PackedStringArray) -> void:
 		_build()
 		_run()
 		return
-	var t: AutoTest = script.new()
+	# Typed as Node, NOT as AutoTest. `tests/*` is excluded from the release
+	# export, so naming that global class here makes this whole script fail to
+	# PARSE in a shipped build -- which takes the main scene with it and leaves
+	# the player looking at an empty window. The null check above cannot help:
+	# the failure happens before a single line of it runs.
+	var t: Node = script.new()
 	# Parented to an autoload so changing scenes does not free the harness.
 	SceneFlow.add_child(t)
 	t.run(chapters, shots, quick)
@@ -153,8 +158,9 @@ func _run() -> void:
 	await SceneFlow.fade_to_black(0.45)
 	_stage("main menu")
 	_layer.queue_free()
+	# Nothing after this line runs: goto_menu changes the scene, which frees
+	# this node and cancels the coroutine. The menu logs its own readiness.
 	await SceneFlow.goto_menu(false)
-	Log.info("Boot: main menu is up")
 
 ## Warms the procedural caches one step at a time, yielding a frame between
 ## each, so the splash keeps animating and the window keeps pumping messages.
