@@ -167,7 +167,10 @@ func _depth(m: StandardMaterial3D, scale: float = 0.035, layers: int = 10) -> St
 	# instead, which is the part of the effect triplanar can actually render.
 	if m.uv1_triplanar:
 		m.normal_enabled = true
-		m.normal_scale = minf(m.normal_scale * 1.45, 3.0)
+		# A gentle lift only. The first version multiplied by 1.45 and capped at
+		# 3.0, which on the rock and cliff maps carved pits deep enough to shade
+		# near-black -- the slopes came out looking like animal hide.
+		m.normal_scale = minf(m.normal_scale * 1.12, 1.8)
 		return m
 	# These parallax steps cost three texture samples rather than one. Measured,
 	# it was the most expensive thing in the frame by a wide margin, and the
@@ -203,12 +206,13 @@ func _build_mat(name: String) -> StandardMaterial3D:
 		# ---------------------------------------------------------- stone / rock
 		"rock":
 			var m := _base(Color(0.736, 0.708, 0.666), 0.88, 0.0)
-			m.albedo_texture = noise_tex("rock_a", 11, 0.009, [
-				[0.0, Color(0.20, 0.19, 0.18)], [0.42, Color(0.40, 0.39, 0.37)],
-				[0.72, Color(0.55, 0.53, 0.50)], [1.0, Color(0.66, 0.64, 0.60)]], 5)
+			# Same problem as cliff: too few features per tile to hide the repeat.
+			m.albedo_texture = noise_tex("rock_a", 11, 0.026, [
+				[0.0, Color(0.28, 0.27, 0.26)], [0.42, Color(0.41, 0.40, 0.38)],
+				[0.72, Color(0.53, 0.51, 0.48)], [1.0, Color(0.62, 0.60, 0.56)]], 5)
 			m.normal_enabled = true
-			m.normal_texture = normal_tex("rock_a", 11, 0.022, 12.0, 5)
-			m.normal_scale = 1.35
+			m.normal_texture = normal_tex("rock_a", 11, 0.055, 5.5, 5)
+			m.normal_scale = 1.0
 			m.roughness_texture = noise_tex("rock_r", 12, 0.02, [
 				[0.0, Color(0.62, 0.62, 0.62)], [1.0, Color(1.0, 1.0, 1.0)]], 3)
 			m.ao_enabled = true
@@ -229,13 +233,23 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			return m
 		"cliff":
 			var m := _base(Color(1, 0.944, 0.889), 0.94, 0.0)
-			m.albedo_texture = noise_tex("cliff_a", 21, 0.006, [
-				[0.0, Color(0.17, 0.16, 0.15)], [0.35, Color(0.33, 0.31, 0.29)],
-				[0.65, Color(0.46, 0.44, 0.41)], [1.0, Color(0.58, 0.56, 0.52)]], 6,
+			# 0.030, not 0.006. At the old frequency a 512px tile held about
+			# three noise features, so tiling it across a hillside repeated a
+			# handful of large blobs -- the single most artificial thing in any
+			# wide shot. Higher frequency plus the same octave count gives rock
+			# structure at metres AND grain at centimetres.
+			# Frequency raised but contrast pulled in. Ridged noise at this scale
+			# with the old near-black-to-light ramp printed hard dark spots all
+			# over the slopes -- an animal-hide pattern, not rock. Rock varies in
+			# tone far less than it varies in relief, so the range narrows here
+			# and the normal map carries the detail instead.
+			m.albedo_texture = noise_tex("cliff_a", 21, 0.020, [
+				[0.0, Color(0.30, 0.29, 0.27)], [0.35, Color(0.38, 0.36, 0.34)],
+				[0.65, Color(0.46, 0.44, 0.41)], [1.0, Color(0.55, 0.53, 0.50)]], 6,
 				TEX_SIZE, FastNoiseLite.TYPE_SIMPLEX, FastNoiseLite.FRACTAL_RIDGED)
 			m.normal_enabled = true
-			m.normal_texture = normal_tex("cliff_a", 21, 0.018, 16.0, 6)
-			m.normal_scale = 1.7
+			m.normal_texture = normal_tex("cliff_a", 21, 0.045, 5.5, 6)
+			m.normal_scale = 1.05
 			return _depth(_tri(m, 0.16), 0.042, 12)
 
 		# ---------------------------------------------------------- ground

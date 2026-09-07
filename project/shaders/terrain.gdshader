@@ -65,6 +65,34 @@ vec3 height_blend(vec3 a, vec3 b, float t, float sharpness) {
 	return (a * wa + b * wb) / max(wa + wb, 0.0001);
 }
 
+// Two decorrelated samples of the same texture, blended by a large-scale mask.
+//
+// Tiling is the loudest artificial signal a landscape can give: a texture
+// repeated every few metres across a hillside reads as wallpaper however good
+// the texture is. Because both samples come from the same source the result
+// can never look wrong.
+//
+// The second sample is at essentially the SAME scale, with its axes permuted
+// and offset. Sampling at a very different scale is the obvious thing to try
+// and it was badly wrong here: stretching a ridged noise texture to a third of
+// its frequency turns its valleys into dark blobs a couple of metres across,
+// and blending those over every slope produced an animal-hide pattern far more
+// artificial than the tiling it was meant to fix. Permuting the axes
+// decorrelates the lookup while leaving feature size alone, which is the
+// property that actually matters.
+//
+// A plain mix, not a height blend: height blending takes whichever sample is
+// locally brighter, which manufactures contrast instead of hiding a repeat.
+vec3 detile(sampler2D t, vec3 p, vec3 n, float s, float mask) {
+	vec3 a = triplanar(t, p, n, s);
+	if (quality < 0.5) {
+		return a;
+	}
+	vec3 q = vec3(p.z + 41.7, p.x + 13.3, p.y + 27.1);
+	vec3 b = triplanar(t, q, n, s * 0.93);
+	return mix(a, b, smoothstep(0.30, 0.70, mask) * 0.5);
+}
+
 void fragment() {
 	vec3 n = normalize(w_norm);
 	float up = clamp(n.y, 0.0, 1.0);
@@ -85,9 +113,9 @@ void fragment() {
 	vec3 dry = mix(ground_tint.rgb, vec3(dot(ground_tint.rgb, vec3(0.299, 0.587, 0.114))),
 		0.45) * 1.18;
 	vec3 g_tint = mix(ground_tint.rgb, dry, patch * ground_variation);
-	vec3 a_ground = triplanar(tex_ground, w_pos, n, uv_scale) * g_tint;
-	vec3 a_slope  = triplanar(tex_slope,  w_pos, n, uv_scale * 0.55) * slope_tint.rgb;
-	vec3 a_peak   = triplanar(tex_peak,   w_pos, n, uv_scale * 0.8) * peak_tint.rgb;
+	vec3 a_ground = detile(tex_ground, w_pos, n, uv_scale, macro) * g_tint;
+	vec3 a_slope  = detile(tex_slope,  w_pos, n, uv_scale * 0.55, 1.0 - macro) * slope_tint.rgb;
+	vec3 a_peak   = triplanar(tex_peak, w_pos, n, uv_scale * 0.8) * peak_tint.rgb;
 
 	vec3 col = height_blend(a_ground, a_slope, steep, 0.85);
 	col = height_blend(col, a_peak, peak * (1.0 - steep * 0.55), 0.7);
@@ -124,8 +152,20 @@ void fragment() {
 	if (quality > 0.5 && near_w > 0.01) {
 		// A second normal octave at close range. Detail normals do more for
 		// perceived surface depth than any amount of extra albedo detail.
+		//
+		// This has to happen in decoded space. The previous version added and
+		// normalize()d the [0,1] *encoded* values directly, which is not a
+		// meaningful operation on a direction: it dragged the whole surface
+		// normal off true wherever the detail layer was active, and stamped
+		// high-contrast blotches across every slope within the fade distance --
+		// an animal-hide pattern that vanished the moment the detail layer was
+		// switched off, which is what finally identified it.
 		vec3 nd = triplanar(nrm_ground, w_pos, n, uv_scale * 4.2);
-		nm = normalize(mix(nm, normalize(nm + (nd - vec3(0.5, 0.5, 0.0)) * 0.9), near_w));
+		vec3 base_n = nm * 2.0 - 1.0;
+		vec3 det_n = nd * 2.0 - 1.0;
+		// UDN blend: perturb the tangent-space slope, keep the base facing.
+		vec3 comb = normalize(vec3(base_n.xy + det_n.xy * 0.65, base_n.z));
+		nm = mix(nm, comb * 0.5 + 0.5, near_w);
 	}
 	NORMAL_MAP = nm;
 	NORMAL_MAP_DEPTH = normal_depth * mix(1.0, 1.5, near_w);
