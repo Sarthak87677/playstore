@@ -117,6 +117,9 @@ func set_input_enabled(v: bool) -> void:
 		device.set_aiming(false)
 		device.end_scan()
 
+func is_input_enabled() -> bool:
+	return _input_enabled
+
 func set_spawn(pos: Vector3, yaw: float) -> void:
 	_spawn_point = pos
 	_spawn_yaw = yaw

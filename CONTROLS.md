@@ -13,9 +13,14 @@ controls the camera; its sensitivity is separate from the mouse.
 
 ## If you have just started
 
-A **How to Play** card appears the first time you begin a new game, listing
-every control below in the order you need them. It is always available again
-from **Pause → How to Play**.
+A new game drops you straight into play. Nothing blocks the first frame and
+there is nothing to dismiss: the controls are taught where they are needed
+rather than listed up front. The full list below is one keypress away at any
+time from **Pause → How to Play**.
+
+Prompts appear as each action becomes relevant and retire once you have used
+that action a few times. If you would rather they never went away, Settings has
+*Always show prompts*.
 
 The **gold diamond** on screen is your current objective, with the distance
 under it. When the objective is behind you the diamond becomes an arrow pinned

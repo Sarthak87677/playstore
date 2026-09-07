@@ -105,12 +105,15 @@ func begin(index: int, mode: String) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	GameState.begin_run()
 	chapter.begin_play(mode)
-	# A first-time player gets the controls in front of them once, before the
-	# world starts asking anything of them. Reachable from Pause afterwards.
-	if index == 0 and mode == "new" and not bool(GameState.data.get("seen_how_to_play", false)) \
-			and not Log.skipping("hud"):
+	# The game starts playing immediately. There is deliberately no card in the
+	# way: a modal panel between the player and their first frame is a wall, and
+	# a player who cannot find the key that dismisses it concludes the game is
+	# broken -- which is exactly what happened. The controls are taught where
+	# they are needed instead: the objective panel, the gold waypoint, the
+	# contextual prompts, MOTE, and How to Play in the pause menu.
+	if index == 0 and mode == "new" and not Log.skipping("hud"):
 		GameState.data["seen_how_to_play"] = true
-		_show_how_to_play()
+		_show_opening_hint()
 	Log.info("Chapter %d started (%s), %d veil subjects" % [
 		index + 1, mode, chapter.manager.subject_count()])
 
@@ -152,31 +155,23 @@ func resume() -> void:
 	if pause_menu:
 		pause_menu.set_open(false)
 
-# ================================================================ death
-## Shown once on a first new game. Pauses so nothing happens behind it.
+## The whole of the opening instruction: one line that fades by itself, while
+## the player is already moving.
 ##
-## Hosted on its own CanvasLayer above the HUD and set to run while paused. As a
-## plain child of this node it inherited PROCESS_MODE_PAUSABLE, so pausing the
-## game stopped it receiving input and nothing could dismiss it; and it drew
-## underneath the HUD, so the objective panel and subtitles sat on top of it.
-func _show_how_to_play() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 30
-	layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	add_child(layer)
-	var card: Control = load("res://ui/HowToPlay.gd").new()
-	layer.add_child(card)
-	if hud:
-		hud.set_hud_visible(false)
-	SceneFlow.set_paused(true)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	card.connect("closed", func() -> void:
-		layer.queue_free()
-		if hud:
-			hud.set_hud_visible(true)
-		SceneFlow.set_paused(false)
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
+## This replaced a modal How to Play card. The card listed every binding before
+## the player had done anything, paused the game to do it, and had to be
+## dismissed -- so when it went wrong it was not a poor tutorial, it was a
+## locked door. The keys are taught where they are needed instead: the chapter
+## already requests the move, look and interact tutorials on its first beat, the
+## contextual prompts cover the rest as each ability is unlocked, the gold
+## waypoint says where to go, and the full list is in Pause -> How to Play for
+## anyone who wants it.
+func _show_opening_hint() -> void:
+	if hud == null:
+		return
+	hud.toast("Escape for How to Play", UITheme.TEXT_DIM)
 
+# ================================================================ death
 func _on_death() -> void:
 	if _dead:
 		return

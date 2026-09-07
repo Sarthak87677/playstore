@@ -794,41 +794,49 @@ func _all_buttons_connected(root: Node) -> bool:
 ## game paused while it is up, and hand control back when dismissed.
 func _test_how_to_play() -> void:
 	print("\n-- how to play --")
+	# A new game must start PLAYING. There is no card in front of the player and
+	# nothing to dismiss: the card was a modal panel between the player and their
+	# first frame, and when it misbehaved it read as a frozen game rather than as
+	# a tutorial. This check exists to keep it from coming back.
 	GameState.start_new_game(2, Veil.Difficulty.FIELD)
 	GameState.data["seen_how_to_play"] = false
 	await SceneFlow.start_chapter(0, "new")
 	var game := get_tree().current_scene
-	await _wait(0.6)
-	var card: Node = null
-	for n in _walk(game):
-		if n.get_class() == "Control" and n.get_script() != null \
-				and String(n.get_script().resource_path).ends_with("HowToPlay.gd"):
-			card = n
-			break
-	if not check("how-to-play card appears on a new game", card != null):
-		return
-	check("it holds the game paused", SceneFlow.is_paused())
-	check("it lists the real bindings",
-		_panel_is_laid_out(card as Control) and _control_text(card).find("Shift everything") >= 0,
-		"%d chars of text" % _control_text(card).length())
-	# Dismiss it the way a player does. The previous version of this test called
-	# emit_signal("closed") directly, which is why it passed while the shipped
-	# card was impossible to close: as a child of the pausable Game node it
-	# stopped receiving input the moment it paused the game.
-	check("the card processes while the game is paused",
-		card.process_mode == Node.PROCESS_MODE_ALWAYS)
-	check("every part of the card is on screen", _fits_on_screen(card))
-	await _shot("ui_how_to_play")
-	check("the card is above the HUD",
-		card.get_parent() is CanvasLayer and (card.get_parent() as CanvasLayer).layer > 10,
-		"parent=%s" % card.get_parent().get_class())
-	_press("pause")
+	await _wait(0.8)
+	check("a new game starts playing, with nothing to dismiss",
+		not SceneFlow.is_paused())
+	check("no modal card is in the way", _find_how_to_play(game) == null)
+	check("the player has control immediately",
+		game.player != null and game.player.is_input_enabled())
+
+	# It still has to exist and still has to work, because it is one keypress
+	# away in the pause menu -- which is where the controls now live.
+	game.toggle_pause()
 	await _wait(0.35)
-	_release("pause")
-	await _wait(0.5)
-	check("a keypress dismisses it", not SceneFlow.is_paused())
-	check("it is marked seen so it does not come back",
-		bool(GameState.data.get("seen_how_to_play", false)))
+	game.pause_menu._open_panel("howtoplay")
+	await _wait(0.4)
+	var card: Node = _find_how_to_play(game.pause_menu)
+	if not check("Pause -> How to Play opens the card", card != null):
+		return
+	check("it lists the real bindings",
+		_control_text(card).find("Shift everything") >= 0,
+		"%d chars of text" % _control_text(card).length())
+	check("every part of the card is on screen", _fits_on_screen(card))
+	check("it processes while the game is paused",
+		card.process_mode == Node.PROCESS_MODE_ALWAYS)
+	await _shot("ui_how_to_play")
+	game.pause_menu._close_panel()
+	await _wait(0.2)
+	game.toggle_pause()
+	await _wait(0.3)
+	check("closing it hands control back", not SceneFlow.is_paused())
+
+func _find_how_to_play(root: Node) -> Node:
+	for n in _walk(root):
+		if n.get_script() != null \
+				and String(n.get_script().resource_path).ends_with("HowToPlay.gd"):
+			return n
+	return null
 
 func _control_text(root: Node) -> String:
 	var out := ""

@@ -500,7 +500,15 @@ func toast(text: String, color: Color = UITheme.TEXT) -> void:
 	var pc := PanelContainer.new()
 	pc.add_theme_stylebox_override("panel",
 		UITheme.panel(Color(0.03, 0.04, 0.05, 0.82), 4, 1, color.darkened(0.3)))
-	pc.add_child(UITheme.label(text, 16, color, HORIZONTAL_ALIGNMENT_RIGHT))
+	# Wrap rather than overflow. The toast strip is a fixed 300px column anchored
+	# to the right edge, so a label wider than that pushes itself off the side of
+	# the screen -- which is where the opening hint ended up, and where any long
+	# unlock name would go too.
+	var tl := UITheme.label(text, 16, color, HORIZONTAL_ALIGNMENT_RIGHT)
+	tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tl.custom_minimum_size.x = UITheme.s(150)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pc.add_child(tl)
 	pc.modulate.a = 0.0
 	_toasts.add_child(pc)
 	# queue_free() does not detach the child until the end of the frame, so the
