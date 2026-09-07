@@ -5,7 +5,7 @@ class_name Atmosphere
 
 var sun: DirectionalLight3D
 var fill: DirectionalLight3D
-var _sky_mat: ProceduralSkyMaterial
+var _sky_mat: ShaderMaterial
 var _state: int = Veil.State.RUIN
 var _blend: Dictionary = {}
 var presets: Array = []          # three dictionaries, indexed by Veil.State
@@ -19,12 +19,17 @@ func setup(p_presets: Array, initial_state: int, tod: float = 0.42) -> void:
 	time_of_day = tod
 
 	var env := Environment.new()
-	_sky_mat = ProceduralSkyMaterial.new()
-	_sky_mat.sky_energy_multiplier = 1.0
-	_sky_mat.ground_energy_multiplier = 1.0
+	# A shader sky rather than ProceduralSkyMaterial: the built-in one is a
+	# vertical gradient and a disc, which left every outdoor frame with an empty
+	# sky. This one has cloud decks lit by the same sun the world uses.
+	_sky_mat = ShaderMaterial.new()
+	_sky_mat.shader = load("res://shaders/sky.gdshader")
 	var sky := Sky.new()
 	sky.sky_material = _sky_mat
 	sky.radiance_size = Sky.RADIANCE_SIZE_128
+	# The sky feeds ambient and reflections; re-baking it every frame for drifting
+	# clouds is not worth the cost, so it updates on a slow cadence instead.
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
 	env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -41,8 +46,15 @@ func setup(p_presets: Array, initial_state: int, tod: float = 0.42) -> void:
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 	sun.directional_shadow_max_distance = 220.0
 	sun.directional_shadow_blend_splits = true
-	sun.shadow_bias = 0.045
-	sun.shadow_normal_bias = 1.4
+	sun.shadow_bias = 0.038
+	sun.shadow_normal_bias = 1.15
+	# Contact shadows close the gap where cascade shadows lose small-scale
+	# occlusion: grass meeting ground, a crate's base, a rock's underside. Their
+	# absence is a large part of why objects look pasted onto the terrain rather
+	# than resting on it.
+	sun.shadow_transmittance_bias = 0.05
+	sun.directional_shadow_fade_start = 0.92
+	sun.shadow_opacity = 1.0
 	add_child(sun)
 
 	fill = DirectionalLight3D.new()
@@ -90,12 +102,22 @@ func _apply(p: Dictionary, instant: bool) -> void:
 	var env := environment
 	if env == null:
 		return
-	_sky_mat.sky_top_color = p.get("sky_top", Color(0.3, 0.4, 0.6))
-	_sky_mat.sky_horizon_color = p.get("sky_horizon", Color(0.6, 0.65, 0.7))
-	_sky_mat.ground_horizon_color = p.get("sky_horizon", Color(0.6, 0.65, 0.7))
-	_sky_mat.ground_bottom_color = p.get("ground", Color(0.15, 0.14, 0.13))
-	_sky_mat.sun_angle_max = float(p.get("sun_size", 8.0))
-	_sky_mat.sky_energy_multiplier = float(p.get("sky_energy", 1.0))
+	var horizon_c: Color = p.get("sky_horizon", Color(0.6, 0.65, 0.7))
+	_sky_mat.set_shader_parameter("zenith", p.get("sky_top", Color(0.3, 0.4, 0.6)))
+	_sky_mat.set_shader_parameter("horizon", horizon_c)
+	_sky_mat.set_shader_parameter("ground_col", p.get("ground", Color(0.15, 0.14, 0.13)))
+	_sky_mat.set_shader_parameter("sun_col", p.get("sun_color", Color(1.0, 0.96, 0.9)))
+	_sky_mat.set_shader_parameter("sun_size_deg", float(p.get("sun_size", 8.0)))
+	_sky_mat.set_shader_parameter("sky_energy", float(p.get("sky_energy", 1.0)))
+	_sky_mat.set_shader_parameter("haze", float(p.get("sky_haze", 0.35)))
+	_sky_mat.set_shader_parameter("horizon_falloff", float(p.get("sky_falloff", 2.6)))
+	_sky_mat.set_shader_parameter("cloud_amount", float(p.get("clouds", 0.5)))
+	_sky_mat.set_shader_parameter("cloud_density", float(p.get("cloud_density", 1.5)))
+	_sky_mat.set_shader_parameter("cirrus_amount", float(p.get("cirrus", 0.35)))
+	_sky_mat.set_shader_parameter("cloud_col", p.get("cloud_col", Color(1.0, 0.99, 0.97)))
+	_sky_mat.set_shader_parameter("cloud_dark", p.get("cloud_dark", Color(0.36, 0.40, 0.48)))
+	_sky_mat.set_shader_parameter("wind_speed", float(p.get("cloud_speed", 9.0)))
+	_sky_mat.set_shader_parameter("sun_glow", float(p.get("sun_glow", 1.2)))
 
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
@@ -125,10 +147,14 @@ func _apply(p: Dictionary, instant: bool) -> void:
 	env.tonemap_exposure = float(p.get("exposure", 1.0))
 
 	env.glow_intensity = float(p.get("glow", 0.42))
-	env.glow_bloom = float(p.get("bloom", 0.04))
-	env.glow_hdr_threshold = 1.35
-	env.glow_hdr_scale = 2.0
-	env.glow_strength = 0.85
+	# glow_bloom adds bloom to every pixel regardless of threshold; anything
+	# above zero puts a haze over the whole frame.
+	env.glow_bloom = float(p.get("bloom", 0.0))
+	# Bloom only what is genuinely brighter than white. At 1.35 any lit surface
+	# crept over the line and the whole frame acquired a haze.
+	env.glow_hdr_threshold = 1.95
+	env.glow_hdr_scale = 1.6
+	env.glow_strength = 0.72
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
 
 	env.ssao_radius = 1.6
@@ -171,7 +197,15 @@ func _apply_quality() -> void:
 	env.sdfgi_min_cell_size = 0.25
 	env.sdfgi_use_occlusion = true
 	env.sdfgi_energy = 1.0
+	# Cloud march length is the sky's whole cost, so it follows the preset.
+	if _sky_mat != null:
+		_sky_mat.set_shader_parameter("cloud_steps", int(d.get("cloud_steps", 10)))
 	sun.directional_shadow_max_distance = 140.0 if not bool(d.sdfgi) else 220.0
+	# Contact shadows are a screen-space trace, so they cost per-pixel; the
+	# preset decides whether they run at all.
+	sun.shadow_blur = float(d.get("shadow_blur", 1.0))
+	if sun.has_method("set_param"):
+		sun.set_param(Light3D.PARAM_SHADOW_PANCAKE_SIZE, 20.0)
 	if environment:
 		environment.adjustment_brightness = float(_blend.get("brightness", 1.0)) * Settings.brightness
 

@@ -58,6 +58,10 @@ func begin(index: int, mode: String) -> void:
 	mote.bind(player, chapter.manager)
 	chapter.manager.set_player(player)
 
+	# Finishing pass goes in before the HUD so it never grades the interface.
+	if not Log.skipping("post"):
+		add_child(load("res://ui/PostFX.gd").new())
+
 	hud = HUD.new()
 	add_child(hud)
 	if Log.skipping("hud"):

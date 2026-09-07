@@ -123,6 +123,10 @@ func build_palettes() -> Array:
 		Atmosphere.palette(mem.darkened(0.42), mem, mem.lightened(0.06),
 			Color(1.0, 0.97, 0.90), 2.6, 0.0010, 0.0045,
 			{"saturation": 0.96, "contrast": 1.06, "glow": 0.5, "exposure": 1.0,
+			 # Memory: high, clean weather -- scattered fair-weather cumulus.
+			 "clouds": 0.42, "cloud_density": 1.35, "cirrus": 0.45,
+			 "cloud_col": Color(1.0, 0.99, 0.98), "cloud_dark": Color(0.46, 0.53, 0.66),
+			 "cloud_speed": 7.0, "sky_haze": 0.26, "sky_falloff": 2.9, "sun_glow": 1.1,
 			 "sun_pitch": -54.0, "sun_yaw": 28.0, "fill_energy": 0.34,
 			 "ambient": 0.90, "fog_begin": 70.0, "fog_end": 900.0, "sky_energy": 0.95,
 			 "fog_aerial": 0.05}),
@@ -130,6 +134,10 @@ func build_palettes() -> Array:
 		Atmosphere.palette(ruin.darkened(0.5), ruin, ruin.lightened(0.02),
 			Color(0.94, 0.89, 0.83), 1.5, 0.0022, 0.0090,
 			{"saturation": 0.80, "contrast": 1.14, "glow": 0.30, "exposure": 0.95,
+			 # Ruin: heavy overcast, low and fast, very little sky showing.
+			 "clouds": 0.86, "cloud_density": 2.4, "cirrus": 0.12,
+			 "cloud_col": Color(0.78, 0.79, 0.82), "cloud_dark": Color(0.24, 0.25, 0.29),
+			 "cloud_speed": 15.0, "sky_haze": 0.62, "sky_falloff": 1.9, "sun_glow": 0.55,
 			 "sun_pitch": -30.0, "sun_yaw": 64.0, "fill_energy": 0.26,
 			 "ambient": 0.78, "fog_begin": 34.0, "fog_end": 560.0, "sky_energy": 0.7,
 			 "fog_aerial": 0.10}),
@@ -137,6 +145,10 @@ func build_palettes() -> Array:
 		Atmosphere.palette(bloom.darkened(0.44), bloom, bloom.lightened(0.05),
 			Color(1.0, 0.98, 0.88), 2.2, 0.0016, 0.0070,
 			{"saturation": 1.16, "contrast": 1.08, "glow": 0.55, "exposure": 1.0,
+			 # Bloom: warm, humid, tall build-ups with bright edges.
+			 "clouds": 0.58, "cloud_density": 1.7, "cirrus": 0.30,
+			 "cloud_col": Color(1.0, 0.98, 0.92), "cloud_dark": Color(0.40, 0.46, 0.42),
+			 "cloud_speed": 5.0, "sky_haze": 0.40, "sky_falloff": 2.4, "sun_glow": 1.35,
 			 "sun_pitch": -48.0, "sun_yaw": 16.0, "fill_energy": 0.34,
 			 "ambient": 0.90, "fog_begin": 50.0, "fog_end": 700.0, "sky_energy": 0.9,
 			 "fog_aerial": 0.07}),

@@ -117,7 +117,27 @@ deliberate — it is what made eight complete chapters achievable — but a long
 schedule would break the pattern more often, as Archive Zero does by dropping
 traversal almost entirely.
 
-## 7. Smaller known issues
+## 7. Two props near the Chapter 1 spawn clip to white
+
+Two objects just in front of the starting position render as featureless white
+shapes instead of showing their form. It is a shading problem, not a missing
+model: they are correctly placed and the geometry is there.
+
+I have not fixed it, and I have not identified it. Ruled out by changing each
+candidate and re-rendering: emissive materials (emission is now clamped below
+1.0), additive materials (albedo and emission both scaled so the sum stays under
+1.0), MOTE's shell (a near-mirror metallic finish carrying its own lamp), the
+Device's lamp and emissive box, weather particles (which *were* a real bug, now
+fixed — see §8), and the glass materials (a mirror at roughness 0.04, no longer).
+The artifact is pixel-identical through every one of those changes, which is
+itself the strongest clue: whatever draws it is unaffected by all of them.
+
+The next step is to dump every MeshInstance3D within a few metres of the spawn,
+with its material, from a rendered run — rather than continuing to guess and
+re-render. Each render-and-look cycle costs about twelve minutes on the software
+rasteriser here, and I ran out of budget for them before getting there.
+
+## 7a. Smaller known issues
 
 * **Guardian navigation is a steering behaviour, not a navmesh.** Guardians
   raycast ahead and sidestep obstacles. They handle the open spaces they patrol
@@ -145,7 +165,20 @@ traversal almost entirely.
   field, but there has only ever been version 1, so migration is untested by
   anything other than its own unit check.
 
-## 8. What is explicitly *not* a limitation
+## 8. Fixed since the last build
+
+* **Weather particles spawned on the camera lens.** The emission box is centred
+  on the player, so a 34 cm glass shard could spawn 30 cm from the camera and
+  fill a third of the screen as a white smear. Every weather system now fades
+  its particles out below about a metre.
+* **Emissive props clipped to white.** Emission is linear and uncapped, so
+  energy 1.8 on a colour with a 1.0 channel put 1.8 into that channel. Both
+  procedural emissive helpers now hold the total under 1.0, and emissive
+  surfaces keep a dark albedo instead of double-counting with the lighting.
+* **Bloom hazed the whole frame.** `glow_bloom` applies regardless of the HDR
+  threshold; it is now zero, and the threshold is 1.95 rather than 1.35.
+
+## 9. What is explicitly *not* a limitation
 
 These were verified and hold:
 

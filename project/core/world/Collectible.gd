@@ -67,7 +67,7 @@ func _build_visual() -> void:
 			_visual.add_child(b)
 	var light := OmniLight3D.new()
 	light.light_color = col
-	light.light_energy = 1.4
+	light.light_energy = 0.7
 	light.omni_range = 5.0
 	light.position.y = 0.3
 	_visual.add_child(light)

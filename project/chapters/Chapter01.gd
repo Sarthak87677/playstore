@@ -168,14 +168,14 @@ func _build_start() -> void:
 		Vector3.ZERO, Veil.Surface.STONE)
 	var dev := MeshInstance3D.new()
 	dev.mesh = ProcAssets.box_mesh(Vector3(0.36, 0.20, 0.30))
-	dev.material_override = ProcAssets.emissive(Color(0.5, 0.85, 1.0), 1.8)
+	dev.material_override = ProcAssets.emissive(Color(0.5, 0.85, 1.0), 0.9)
 	dev.position = base + Vector3(0, 1.15, 0)
 	add_child(dev)
 	var halo := decor(ProcAssets.ring_mesh(0.34, 0.03, 20, 6),
-		ProcAssets.additive(Color(0.5, 0.85, 1.0), 2.6), base + Vector3(0, 1.15, 0))
+		ProcAssets.additive(Color(0.5, 0.85, 1.0), 1.2), base + Vector3(0, 1.15, 0))
 	var lamp := OmniLight3D.new()
 	lamp.light_color = Color(0.5, 0.85, 1.0)
-	lamp.light_energy = 2.2
+	lamp.light_energy = 0.6
 	lamp.omni_range = 9.0
 	lamp.position = base + Vector3(0, 1.4, 0)
 	add_child(lamp)

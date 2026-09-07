@@ -150,6 +150,47 @@ func _tri(m: StandardMaterial3D, scale: float) -> StandardMaterial3D:
 	m.uv1_scale = Vector3(scale, scale, scale)
 	return m
 
+## Deep parallax from the material's own normal map.
+##
+## The single biggest difference between a flat textured surface and one that
+## looks real is whether the surface has depth when you look across it. A normal
+## map fakes the lighting of depth; parallax actually displaces the texture
+## lookup, so mortar lines sink and stones stand proud as you move. It is the
+## most expensive per-pixel option on a StandardMaterial3D, so it goes only on
+## the materials the player stands next to, and the step counts stay modest.
+func _depth(m: StandardMaterial3D, scale: float = 0.035, layers: int = 10) -> StandardMaterial3D:
+	if m.normal_texture == null:
+		return m
+	# These are all triplanar materials, so every parallax step costs three
+	# texture samples rather than one. Measured, it was the most expensive thing
+	# in the frame by a wide margin, and the target hardware includes integrated
+	# GPUs -- so it is a High-and-above feature, off below that. Materials are
+	# cached, so this is read once per material.
+	var q := float(Settings.preset_data().get("parallax", 0.0))
+	if q <= 0.01:
+		return m
+	layers = maxi(2, int(round(float(layers) * q)))
+	m.heightmap_enabled = true
+	m.heightmap_texture = m.normal_texture
+	m.heightmap_scale = scale
+	m.heightmap_deep_parallax = true
+	m.heightmap_min_layers = maxi(2, layers / 2)
+	m.heightmap_max_layers = layers
+	m.heightmap_flip_texture = false
+	return m
+
+## A second, finer copy of the surface blended in close up. Godot applies detail
+## maps over the base, which breaks the tiling that otherwise reads as wallpaper.
+func _detail(m: StandardMaterial3D, tex: Texture2D, nrm: Texture2D,
+		blend: int = BaseMaterial3D.BLEND_MODE_MIX) -> StandardMaterial3D:
+	m.detail_enabled = true
+	m.detail_blend_mode = blend
+	m.detail_albedo = tex
+	if nrm != null:
+		m.detail_normal = nrm
+	m.detail_uv_layer = BaseMaterial3D.DETAIL_UV_1
+	return m
+
 func _build_mat(name: String) -> StandardMaterial3D:
 	match name:
 		# ---------------------------------------------------------- stone / rock
@@ -167,7 +208,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.ao_texture = noise_tex("rock_ao", 13, 0.014, [
 				[0.0, Color(0.55, 0.55, 0.55)], [0.6, Color(1, 1, 1)], [1.0, Color(1, 1, 1)]], 3)
 			m.ao_light_affect = 0.55
-			return _tri(m, 0.28)
+			return _depth(_tri(m, 0.28), 0.030, 12)
 		"rock_dark":
 			var m := mat("rock").duplicate() as StandardMaterial3D
 			m.albedo_color = Color(0.34, 0.333, 0.354)
@@ -188,7 +229,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_enabled = true
 			m.normal_texture = normal_tex("cliff_a", 21, 0.018, 16.0, 6)
 			m.normal_scale = 1.7
-			return _tri(m, 0.16)
+			return _depth(_tri(m, 0.16), 0.042, 12)
 
 		# ---------------------------------------------------------- ground
 		"grass":
@@ -243,7 +284,7 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.ao_enabled = true
 			m.ao_texture = noise_tex("conc_ao", 82, 0.01, [
 				[0.0, Color(0.6, 0.6, 0.6)], [1.0, Color(1, 1, 1)]], 3)
-			return _tri(m, 0.24)
+			return _depth(_tri(m, 0.24), 0.024, 10)
 		"concrete_aged":
 			var m := mat("concrete").duplicate() as StandardMaterial3D
 			m.albedo_color = Color(0.491, 0.491, 0.463)
@@ -280,18 +321,25 @@ func _build_mat(name: String) -> StandardMaterial3D:
 				[0.0, Color(0.50, 0.38, 0.16)], [1.0, Color(0.86, 0.70, 0.34)]], 3)
 			return _tri(m, 0.3)
 		"glass":
-			var m := _base(Color(0.72, 0.82, 0.88, 0.20), 0.04, 0.0)
+			# metallic_specular 0.95 at roughness 0.04 is a mirror. Reflecting an
+			# overcast sky it clipped to flat white, so every glass shard near the
+			# camera rendered as a featureless blob with no facets -- the one
+			# material the tint pass never touched, which is why it survived every
+			# other correction. Real glass reflects strongly only at grazing
+			# angles, which Fresnel already gives; the flat boost was double-
+			# counting it.
+			var m := _base(Color(0.72, 0.82, 0.88, 0.20), 0.09, 0.0)
 			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			m.cull_mode = BaseMaterial3D.CULL_DISABLED
-			m.metallic_specular = 0.95
+			m.metallic_specular = 0.42
 			m.refraction_enabled = false
 			m.backlight_enabled = true
-			m.backlight = Color(0.2, 0.26, 0.3)
+			m.backlight = Color(0.11, 0.15, 0.18)
 			return m
 		"glass_broken":
 			var m := mat("glass").duplicate() as StandardMaterial3D
 			m.albedo_color = Color(0.62, 0.68, 0.70, 0.34)
-			m.roughness = 0.30
+			m.roughness = 0.42
 			m.normal_enabled = true
 			m.normal_texture = normal_tex("glassb", 131, 0.08, 9.0, 4)
 			return m
@@ -419,10 +467,20 @@ func emissive(c: Color, energy: float = 2.5) -> StandardMaterial3D:
 	if _mat.has(key):
 		return _mat[key]
 	var m := StandardMaterial3D.new()
-	m.albedo_color = c
+	# An emissive surface keeps a DARK albedo. Giving it the same bright colour
+	# as its emission double-counts: the emission is added on top of a surface
+	# that is already being lit, and if the object also carries its own lamp --
+	# which glowing props here do -- the sum clips to white and the object loses
+	# its shape entirely.
+	m.albedo_color = Color(c.r * 0.35, c.g * 0.35, c.b * 0.35, c.a)
 	m.emission_enabled = true
 	m.emission = c
-	m.emission_energy_multiplier = energy
+	# Emission is linear and uncapped: energy 1.8 on a colour with a 1.0 channel
+	# put 1.8 into that channel, which clips to pure white however the tonemapper
+	# is set. Emissive props were rendering as featureless white shapes. Held
+	# under 1.0 so a glowing object keeps its hue and the HDR threshold, not the
+	# clip, decides what blooms.
+	m.emission_energy_multiplier = minf(energy, 0.95 / maxf(maxf(c.r, c.g), maxf(c.b, 0.001)))
 	m.roughness = 0.35
 	m.metallic = 0.0
 	_mat[key] = m
@@ -437,10 +495,23 @@ func additive(c: Color, energy: float = 2.0, cull_disabled: bool = true) -> Stan
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_color = c
+	# Additive blending adds the albedo AND the emission, so passing a full-alpha
+	# colour at energy 2.6 and then running it through glow produced featureless
+	# white ellipses where the Device halo and MOTE's ring should be. Both halves
+	# are damped here; brightness comes from the HDR threshold now, not from
+	# stacking two contributions.
+	# Additive blending adds the albedo AND the emission, so a full-alpha colour
+	# at energy 2.6 put roughly 3.4x the colour into the frame: MOTE and the
+	# Device halo came out as featureless white ellipses with a hole in them.
+	# Both halves are scaled so the total lands under 1.0 for a mid-bright call
+	# and the glow keeps its hue instead of clipping to white.
+	m.albedo_color = Color(c.r, c.g, c.b, c.a * 0.30)
 	m.emission_enabled = true
 	m.emission = c
-	m.emission_energy_multiplier = energy
+	var peak := maxf(maxf(c.r, c.g), maxf(c.b, 0.001))
+	# albedo contributes c * 0.30 as well, so the emission budget is what is left
+	# under 1.0 rather than the caller's number.
+	m.emission_energy_multiplier = minf(energy * 0.22, (0.92 - 0.30 * peak) / peak)
 	m.disable_receive_shadows = true
 	m.no_depth_test = false
 	if cull_disabled:
@@ -980,6 +1051,10 @@ func terrain_material(preset: String) -> ShaderMaterial:
 	m.set_shader_parameter("slope_tint", Color(d.st))
 	m.set_shader_parameter("peak_tint", Color(d.pt))
 	m.set_shader_parameter("uv_scale", float(d.uv))
+	# The close-range detail octaves are two extra triplanar samples each; Low
+	# takes the single-sample path instead.
+	m.set_shader_parameter("quality",
+		1.0 if float(Settings.preset_data().get("terrain_res", 1.0)) > 0.8 else 0.0)
 	m.set_shader_parameter("peak_start", float(d.peak_start))
 	m.set_shader_parameter("peak_end", float(d.peak_end))
 	m.set_shader_parameter("macro_scale", 0.0075)

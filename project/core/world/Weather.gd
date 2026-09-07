@@ -45,6 +45,18 @@ func _particles(count: int, mesh: Mesh, mat: Material, box: Vector3,
 	p.preprocess = lifetime * 0.6
 	p.visibility_aabb = AABB(-box * 0.5, box)
 	p.draw_pass_1 = mesh
+	# Near-fade. The emission box is centred on the camera, so particles spawn
+	# at every distance including a few centimetres from the lens -- and a 34 cm
+	# glass shard at 30 cm fills a third of the screen as an unreadable white
+	# blob. Godot's distance fade makes a particle invisible below `min` and
+	# fully opaque by `max`, which is what keeps them out of the lens without
+	# thinning the weather anywhere the player can actually see it.
+	if mat is StandardMaterial3D:
+		var sm := (mat as StandardMaterial3D).duplicate() as StandardMaterial3D
+		sm.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+		sm.distance_fade_min_distance = 0.9
+		sm.distance_fade_max_distance = 3.2
+		mat = sm
 	p.material_override = mat
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var pm := ParticleProcessMaterial.new()

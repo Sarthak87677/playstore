@@ -41,26 +41,29 @@ func _build() -> void:
 	shell.mesh = ProcAssets.rock_mesh(99, 0.17, 0.05, 10, 14, 0.92)
 	var m := ProcAssets.mat("metal").duplicate() as StandardMaterial3D
 	m.albedo_color = c.get("shell", Color(0.72, 0.74, 0.78))
-	m.roughness = 0.32
-	m.metallic = 0.8
+	# A near-mirror finish on an object that floats a metre from the camera and
+	# carries its own lamp is a guaranteed specular blowout: MOTE rendered as a
+	# featureless white ellipse against an overcast sky.
+	m.roughness = 0.58
+	m.metallic = 0.35
 	shell.material_override = m
 	add_child(shell)
 
 	ring = MeshInstance3D.new()
 	ring.mesh = ProcAssets.ring_mesh(0.26, 0.022, 22, 6)
-	ring.material_override = ProcAssets.additive(c.get("light", Color(0.55, 0.85, 1.0)), 2.6)
+	ring.material_override = ProcAssets.additive(c.get("light", Color(0.55, 0.85, 1.0)), 1.1)
 	add_child(ring)
 
 	var eye := MeshInstance3D.new()
 	eye.mesh = ProcAssets.sphere_mesh(0.06, 8, 10)
-	eye.material_override = ProcAssets.additive(c.get("light", Color(0.55, 0.85, 1.0)), 3.4, false)
+	eye.material_override = ProcAssets.additive(c.get("light", Color(0.55, 0.85, 1.0)), 1.4, false)
 	eye.position = Vector3(0, 0, 0.15)
 	add_child(eye)
 
 	light = OmniLight3D.new()
 	light.light_color = c.get("light", Color(0.55, 0.85, 1.0))
-	light.light_energy = 1.5
-	light.omni_range = 7.0
+	light.light_energy = 0.45
+	light.omni_range = 5.0
 	light.shadow_enabled = false
 	add_child(light)
 

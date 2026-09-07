@@ -122,9 +122,33 @@ energy, saturation, contrast and glow.
 
 `shaders/terrain.gdshader` is a triplanar three-layer terrain: a ground layer, a
 slope layer selected by surface normal, and a peak layer selected by height,
-with the thresholds broken up by macro noise and a second finer octave for
-close-up grain. Eight biome presets feed it the same procedural noise the object
+with the thresholds broken up by macro noise. Layers are combined with a
+**height-aware blend** rather than a linear mix — each layer's luminance stands
+in for height, so gravel pokes through grass at a boundary instead of
+cross-fading into a smear. Close range gets a second albedo octave and a second
+normal octave, both faded out by view distance: tiling that is invisible at a
+metre is a repeating pattern at fifty, and smooth ground at fifty is featureless
+paint at one. Roughness varies with the macro noise, because uniform roughness is
+most of what makes a surface look like plastic. Eight biome presets feed it the same procedural noise the object
 materials use.
+
+`shaders/sky.gdshader` replaces `ProceduralSkyMaterial`, which is a vertical
+gradient and a sun disc and left every outdoor frame with an empty sky. It has a
+Rayleigh-ish gradient with horizon haze, a limb-darkened sun with forward
+scattering, a cumulus deck lit by the same sun direction the world uses, and a
+cirrus veil above it. Cloud cover, density, colour and speed are per reality
+state, so Ruin is a low fast overcast and Memory is scattered fair-weather
+cumulus. The deck costs one density sample plus up to four samples along the sun
+direction for self-shadowing — the first version marched it properly and cost
+about three hundred noise octaves a pixel, which is not a price worth paying for
+a backdrop.
+
+`shaders/post.gdshader` is the finishing pass: radial chromatic aberration, an
+unsharp mask that puts back the micro-contrast procedural textures and a soft GI
+solution lose, a luminance vignette, and sensor grain shaped by luminance so it
+sits in the mid-tones. All of it is subtle by design; each one is ugly the moment
+it reads as an effect. Strength follows the graphics preset, and *reduce flashing*
+turns the grain down.
 
 `shaders/wind.gdshader` drives `MultiMeshInstance3D` vegetation with a
 two-frequency sway scaled by height above the root, plus a gust uniform the
