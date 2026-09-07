@@ -501,7 +501,10 @@ func emissive(c: Color, energy: float = 2.5) -> StandardMaterial3D:
 	# is set. Emissive props were rendering as featureless white shapes. Held
 	# under 1.0 so a glowing object keeps its hue and the HDR threshold, not the
 	# clip, decides what blooms.
-	m.emission_energy_multiplier = minf(energy, 0.95 / maxf(maxf(c.r, c.g), maxf(c.b, 0.001)))
+	# 0.62, not 0.95. These props sit under an additive halo and usually carry
+	# their own lamp as well, so a surface that only just fits under 1.0 on its
+	# own still clips once everything is summed.
+	m.emission_energy_multiplier = minf(energy, 0.62 / maxf(maxf(c.r, c.g), maxf(c.b, 0.001)))
 	m.roughness = 0.35
 	m.metallic = 0.0
 	_mat[key] = m
@@ -516,23 +519,28 @@ func additive(c: Color, energy: float = 2.0, cull_disabled: bool = true) -> Stan
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	# Additive blending adds the albedo AND the emission, so passing a full-alpha
-	# colour at energy 2.6 and then running it through glow produced featureless
-	# white ellipses where the Device halo and MOTE's ring should be. Both halves
-	# are damped here; brightness comes from the HDR threshold now, not from
-	# stacking two contributions.
 	# Additive blending adds the albedo AND the emission, so a full-alpha colour
-	# at energy 2.6 put roughly 3.4x the colour into the frame: MOTE and the
-	# Device halo came out as featureless white ellipses with a hole in them.
-	# Both halves are scaled so the total lands under 1.0 for a mid-bright call
-	# and the glow keeps its hue instead of clipping to white.
-	m.albedo_color = Color(c.r, c.g, c.b, c.a * 0.30)
+	# at a high energy puts several times the colour into the frame. Both halves
+	# are damped, and brightness comes from the HDR threshold rather than from
+	# stacking contributions.
+	#
+	# The budget has to assume the surface is drawn MORE THAN ONCE. These are
+	# rings and shells, and with culling disabled a view ray crosses both the
+	# near and the far side, compositing two additive layers on the same pixel.
+	# Sizing the budget for one layer is what left the Device halo and the
+	# beacon rings as featureless white pills: two faces at 0.56 in the blue
+	# channel, over an emissive prop that was already at 0.9, clipped every
+	# channel to 1.0 and the shape disappeared.
+	var layers := 2.0 if cull_disabled else 1.0
+	var peak := maxf(maxf(c.r, c.g), maxf(c.b, 0.001))
+	var alpha := 0.30 / layers
+	m.albedo_color = Color(c.r, c.g, c.b, c.a * alpha)
 	m.emission_enabled = true
 	m.emission = c
-	var peak := maxf(maxf(c.r, c.g), maxf(c.b, 0.001))
-	# albedo contributes c * 0.30 as well, so the emission budget is what is left
-	# under 1.0 rather than the caller's number.
-	m.emission_energy_multiplier = minf(energy * 0.22, (0.92 - 0.30 * peak) / peak)
+	# Leave room underneath for the lit surface the halo is drawn over.
+	var budget := 0.55 / layers
+	m.emission_energy_multiplier = minf(energy * 0.22,
+		maxf(budget - alpha * peak, 0.02) / peak)
 	m.disable_receive_shadows = true
 	m.no_depth_test = false
 	if cull_disabled:

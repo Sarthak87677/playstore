@@ -117,25 +117,28 @@ deliberate — it is what made eight complete chapters achievable — but a long
 schedule would break the pattern more often, as Archive Zero does by dropping
 traversal almost entirely.
 
-## 7. Two props near the Chapter 1 spawn clip to white
+## 7. Additive halos are budgeted per layer, not per surface
 
-Two objects just in front of the starting position render as featureless white
-shapes instead of showing their form. It is a shading problem, not a missing
-model: they are correctly placed and the geometry is there.
+Fixed, and worth recording because the diagnosis was wrong four times before it
+was right.
 
-I have not fixed it, and I have not identified it. Ruled out by changing each
-candidate and re-rendering: emissive materials (emission is now clamped below
-1.0), additive materials (albedo and emission both scaled so the sum stays under
-1.0), MOTE's shell (a near-mirror metallic finish carrying its own lamp), the
-Device's lamp and emissive box, weather particles (which *were* a real bug, now
-fixed — see §8), and the glass materials (a mirror at roughness 0.04, no longer).
-The artifact is pixel-identical through every one of those changes, which is
-itself the strongest clue: whatever draws it is unaffected by all of them.
+Two objects near the Chapter 1 spawn rendered as featureless white pills: the
+Veilforge Device's halo and a beacon ring. Guessing at causes and re-rendering
+ruled out the wrong things repeatedly. What settled it was a diagnostic that
+dumps every mesh within a few metres of the camera with its screen position and
+material — there were exactly two additively-blended meshes near the spawn, and
+exactly two blobs.
 
-The next step is to dump every MeshInstance3D within a few metres of the spawn,
-with its material, from a rendered run — rather than continuing to guess and
-re-render. Each render-and-look cycle costs about twelve minutes on the software
-rasteriser here, and I ran out of budget for them before getting there.
+The cause: additive materials were budgeted so that one drawn surface stays
+under 1.0. But these are rings drawn with culling disabled, so a view ray
+crosses both the near and the far side and composites two additive layers onto
+the same pixel — and they are drawn over an emissive prop that was already at
+0.9. Every channel clipped, and the shape vanished. `additive()` now sizes its
+albedo and emission budget by the number of layers a ray will cross, and
+`emissive()` leaves headroom underneath for exactly this case.
+
+The lesson generalises: for additive geometry the question is never "is this
+surface under 1.0", it is "what is the sum along the ray".
 
 ## 7a. Smaller known issues
 
