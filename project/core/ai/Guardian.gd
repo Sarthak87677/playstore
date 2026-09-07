@@ -100,19 +100,26 @@ func _build() -> void:
 		hip.position = Vector3(cos(a) * 0.42, -0.18, sin(a) * 0.42)
 		hip.rotation.y = -a
 		_hull.add_child(hip)
+		# Tapered limb segments with joint housings, not sticks. A walker built
+		# from constant-section boxes reads as a placeholder no matter how well
+		# it moves.
 		var upper := MeshInstance3D.new()
-		upper.mesh = ProcAssets.box_mesh(Vector3(0.09, 0.42, 0.09))
+		upper.mesh = ProcAssets.limb_mesh(0.42, 0.062, 0.048)
 		upper.material_override = body_mat
-		upper.position = Vector3(0, -0.21, 0)
 		hip.add_child(upper)
 		var knee := Node3D.new()
 		knee.position = Vector3(0, -0.42, 0)
 		hip.add_child(knee)
 		var lower := MeshInstance3D.new()
-		lower.mesh = ProcAssets.box_mesh(Vector3(0.07, 0.44, 0.07))
+		lower.mesh = ProcAssets.limb_mesh(0.44, 0.048, 0.030)
 		lower.material_override = trim
-		lower.position = Vector3(0, -0.22, 0)
 		knee.add_child(lower)
+		# A foot, so the leg ends somewhere instead of stopping in mid-air.
+		var foot := MeshInstance3D.new()
+		foot.mesh = ProcAssets.rock_mesh(7100 + i, 0.075, 0.06, 6, 9, 0.45)
+		foot.material_override = body_mat
+		foot.position = Vector3(0, -0.44, 0.02)
+		knee.add_child(foot)
 		_legs.append({"hip": hip, "knee": knee, "phase": float(i) * PI * 0.5})
 
 func _view_distance() -> float:

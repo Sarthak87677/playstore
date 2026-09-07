@@ -20,6 +20,32 @@ echo "==> Godot: $("$GODOT" --version)"
 echo "==> Importing project"
 "$GODOT" --headless --path "$ROOT/project" --editor --quit >/dev/null 2>&1 || true
 
+# A script that fails to PARSE takes down whatever loads it, and the failure
+# surfaces as silence rather than as an error the playtest can catch. The
+# project treats several GDScript warnings as errors -- notably a variable whose
+# type is inferred from a Variant -- so a change that looks fine can stop the
+# game from booting at all. Parsing every script first turns that into a
+# one-second failure with a file and a line number.
+echo "==> Parsing every script"
+PARSE_FAIL=0
+while IFS= read -r f; do
+  rel="${f#$ROOT/project/}"
+  # Autoload singletons are not registered in --check-only, so "Identifier not
+  # found" is expected here and is not a parse failure. Parse errors are
+  # reported before that stage, which is exactly what we are looking for.
+  if out=$("$GODOT" --headless --path "$ROOT/project" --check-only \
+        --script "res://$rel" 2>&1 | grep "Parse Error"); then
+    echo "  $rel" >&2
+    echo "$out" | sed 's/^/    /' >&2
+    PARSE_FAIL=1
+  fi
+done < <(find "$ROOT/project" -name '*.gd' -not -path '*/.godot/*' | sort)
+if [ "$PARSE_FAIL" -ne 0 ]; then
+  echo "error: some scripts do not parse; the game cannot boot with these." >&2
+  exit 1
+fi
+echo "    all scripts parse"
+
 echo "==> Running the automated playtest before packaging"
 # Keep the whole transcript: the per-chapter timings and node counts quoted in
 # QA_REPORT.md come from here, and tail -3 threw them away.

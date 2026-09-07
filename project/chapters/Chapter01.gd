@@ -152,11 +152,11 @@ func _build_start() -> void:
 	hull.position = base + Vector3(9.0, 0.4, 5.0)
 	hull.rotation.y = 0.7
 	add_child(hull)
-	static_mesh(ProcAssets.box_mesh(Vector3(4.2, 1.5, 8.0), 0.5), "metal_rust",
+	static_mesh(ProcAssets.hull_mesh(8.0, 4.2, 1.9), "metal_rust",
 		Vector3.ZERO, Vector3(0.12, 0, 0.22), Vector3.ONE, Veil.Surface.METAL,
 		Veil.L_WORLD, true, hull)
 	decor(ProcAssets.box_mesh(Vector3(3.0, 1.2, 2.4)), "metal_dark",
-		Vector3(0, 1.2, -1.6), Vector3.ZERO, Vector3.ONE, hull)
+		Vector3(0, 1.0, -1.6), Vector3.ZERO, Vector3.ONE, hull)
 	decor(ProcAssets.crystal_mesh(9, 1.6, 0.5, 5), "glass_broken",
 		Vector3(1.4, 1.0, 3.6), Vector3(0.4, 1.0, 0.2), Vector3.ONE, hull)
 

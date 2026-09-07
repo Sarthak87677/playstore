@@ -154,13 +154,26 @@ func resume() -> void:
 
 # ================================================================ death
 ## Shown once on a first new game. Pauses so nothing happens behind it.
+##
+## Hosted on its own CanvasLayer above the HUD and set to run while paused. As a
+## plain child of this node it inherited PROCESS_MODE_PAUSABLE, so pausing the
+## game stopped it receiving input and nothing could dismiss it; and it drew
+## underneath the HUD, so the objective panel and subtitles sat on top of it.
 func _show_how_to_play() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 30
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
 	var card: Control = load("res://ui/HowToPlay.gd").new()
-	add_child(card)
+	layer.add_child(card)
+	if hud:
+		hud.set_hud_visible(false)
 	SceneFlow.set_paused(true)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	card.connect("closed", func() -> void:
-		card.queue_free()
+		layer.queue_free()
+		if hud:
+			hud.set_hud_visible(true)
 		SceneFlow.set_paused(false)
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
 

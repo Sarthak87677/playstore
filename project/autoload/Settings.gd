@@ -120,7 +120,27 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_default_bindings()
 	load_settings()
+	_apply_cmdline_preset()
 	apply_all()
+
+## `--gfx=low|medium|high|cinematic` overrides the saved graphics preset for
+## this launch only, without touching the player's settings file. Capture and
+## regression runs need to choose their own quality: on a software renderer the
+## difference between Low and Cinematic is the difference between a frame a
+## second and a frame a minute, which decides whether a verification pass is
+## possible at all.
+func _apply_cmdline_preset() -> void:
+	const NAMES := {"low": Preset.LOW, "medium": Preset.MEDIUM,
+		"high": Preset.HIGH, "cinematic": Preset.CINEMATIC}
+	for a in OS.get_cmdline_user_args():
+		if not a.begins_with("--gfx="):
+			continue
+		var want := a.substr(6).to_lower()
+		if NAMES.has(want):
+			preset = int(NAMES[want])
+			Log.info("Graphics preset overridden from the command line: %s" % want)
+		else:
+			Log.warn("Unknown --gfx preset '%s'; keeping the saved one" % want)
 
 # =============================================================== input defaults
 func _key(kc: int) -> Dictionary:

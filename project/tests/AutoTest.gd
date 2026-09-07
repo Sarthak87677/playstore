@@ -491,6 +491,8 @@ func _test_chapter(idx: int) -> void:
 	check("player is grounded or supported", pl.is_on_floor() or pl.mode == Player.Mode.SWIM,
 		"mode=%d on_floor=%s" % [pl.mode, pl.is_on_floor()])
 	await _shot("ch%02d_spawn" % (idx + 1))
+	if idx == 0:
+		_dump_near_camera()
 
 	# --- movement really moves. Try each direction: the spawn may face a prop.
 	var best_move := 0.0
@@ -718,6 +720,31 @@ func _test_menus() -> void:
 	menu._close()
 	await _wait(0.2)
 
+## Every visible piece of a card must actually be on screen. The first How to
+## Play card ran its opening paragraph and one whole key column off the right
+## edge of the window: the text existed, the layout "worked", and the player
+## could not read half of it. Checking text content alone cannot see that.
+func _fits_on_screen(root: Node) -> bool:
+	var vp := get_viewport().get_visible_rect().size
+	var ok := true
+	for n in _walk(root):
+		if not (n is Control):
+			continue
+		var c := n as Control
+		if not c.is_visible_in_tree() or c.get_rect().size == Vector2.ZERO:
+			continue
+		if c is ScrollContainer or c.get_parent() is ScrollContainer:
+			continue  # scrolled content is reachable by design
+		var r := c.get_global_rect()
+		if r.position.x < -1.0 or r.position.y < -1.0 \
+				or r.end.x > vp.x + 1.0 or r.end.y > vp.y + 1.0:
+			var what := String(c.name)
+			if c is Label:
+				what = (c as Label).text
+			Log.warn("Off screen: %s %s in %s" % [what.substr(0, 40), r, vp])
+			ok = false
+	return ok
+
 ## A panel that reports zero size draws nothing, however well its buttons are
 ## wired. `set_anchors_preset()` keeps the existing offsets by default, so a
 ## full-screen panel parented to a Control silently collapsed to 0x0 — every
@@ -784,9 +811,22 @@ func _test_how_to_play() -> void:
 	check("it lists the real bindings",
 		_panel_is_laid_out(card as Control) and _control_text(card).find("Shift everything") >= 0,
 		"%d chars of text" % _control_text(card).length())
-	card.emit_signal("closed")
+	# Dismiss it the way a player does. The previous version of this test called
+	# emit_signal("closed") directly, which is why it passed while the shipped
+	# card was impossible to close: as a child of the pausable Game node it
+	# stopped receiving input the moment it paused the game.
+	check("the card processes while the game is paused",
+		card.process_mode == Node.PROCESS_MODE_ALWAYS)
+	check("every part of the card is on screen", _fits_on_screen(card))
+	await _shot("ui_how_to_play")
+	check("the card is above the HUD",
+		card.get_parent() is CanvasLayer and (card.get_parent() as CanvasLayer).layer > 10,
+		"parent=%s" % card.get_parent().get_class())
+	_press("pause")
+	await _wait(0.35)
+	_release("pause")
 	await _wait(0.5)
-	check("dismissing it resumes play", not SceneFlow.is_paused())
+	check("a keypress dismisses it", not SceneFlow.is_paused())
 	check("it is marked seen so it does not come back",
 		bool(GameState.data.get("seen_how_to_play", false)))
 
@@ -871,6 +911,58 @@ func _test_resume(idx: int) -> void:
 	SaveSystem.erase(2)
 	check("erased slot reports empty", SaveSystem.header(2).get("empty", false))
 	check("continue finds no slot to load", SaveSystem.newest_slot() != 2)
+
+## Diagnostic: what is actually on the bright pixels. Two props near the
+## Chapter 1 spawn render as featureless white, and every attempt to identify
+## them by reasoning about materials has been wrong. This prints each visible
+## mesh in front of the camera with its screen position and its material's
+## light-emitting settings, so a blob in a capture can be matched to a node.
+func _dump_near_camera(limit: float = 9.0) -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		print("      (no camera)")
+		return
+	var scene := get_tree().current_scene
+	print("      -- meshes within %.0fm of the camera --" % limit)
+	for n in _walk(scene):
+		if not (n is MeshInstance3D):
+			continue
+		var mi := n as MeshInstance3D
+		if not mi.is_visible_in_tree() or mi.mesh == null:
+			continue
+		var wp := mi.global_position
+		var d := wp.distance_to(cam.global_position)
+		if d > limit or cam.is_position_behind(wp):
+			continue
+		var sp := cam.unproject_position(wp)
+		var mat: Material = mi.material_override
+		if mat == null and mi.mesh.get_surface_count() > 0:
+			mat = mi.mesh.surface_get_material(0)
+		if mat == null:
+			mat = mi.get_active_material(0)
+		var desc := "no material"
+		if mat is StandardMaterial3D:
+			var sm := mat as StandardMaterial3D
+			desc = "albedo=%s emis=%s x%.2f on=%s blend=%d shade=%d unshaded=%s" % [
+				sm.albedo_color, sm.emission, sm.emission_energy_multiplier,
+				sm.emission_enabled, sm.blend_mode, sm.shading_mode,
+				sm.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED]
+		elif mat != null:
+			desc = mat.get_class()
+		print("      %-26s d=%5.2f screen=(%4.0f,%4.0f) %s" % [
+			mi.name.substr(0, 26), d, sp.x, sp.y, desc])
+	print("      -- lights within %.0fm --" % limit)
+	for n in _walk(scene):
+		if not (n is Light3D):
+			continue
+		var li := n as Light3D
+		if not li.is_visible_in_tree() or li is DirectionalLight3D:
+			continue
+		var d := li.global_position.distance_to(cam.global_position)
+		if d > limit:
+			continue
+		print("      %-26s d=%5.2f energy=%.2f colour=%s" % [
+			li.name.substr(0, 26), d, li.light_energy, li.light_color])
 
 func _walk(n: Node) -> Array:
 	var out: Array = [n]

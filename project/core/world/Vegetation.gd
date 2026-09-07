@@ -21,20 +21,42 @@ func scatter(mesh: Mesh, count: int, area: Rect2, sampler: Callable,
 	mm.mesh = mesh
 	mm.instance_count = n
 
+	# Clumping. Uniformly random scatter is the tell that ground cover was
+	# placed by a loop: real vegetation grows in patches, thick where the ground
+	# holds water and thin where it does not, with bare earth showing between.
+	# A low-frequency noise field decides how likely a point is to take, and the
+	# same field scales the plant, so clumps are both denser and taller at their
+	# centres.
+	var clump := FastNoiseLite.new()
+	clump.seed = seed_v * 7 + 13
+	clump.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	clump.frequency = 0.055
+
 	var placed := 0
 	var attempts := 0
-	while placed < n and attempts < n * 6:
+	while placed < n and attempts < n * 14:
 		attempts += 1
 		var x := rng.randf_range(area.position.x, area.position.x + area.size.x)
 		var z := rng.randf_range(area.position.y, area.position.y + area.size.y)
+		# -1..1 -> 0..1, pushed toward the extremes so patches have edges.
+		var c := clampf(clump.get_noise_2d(x, z) * 0.5 + 0.5, 0.0, 1.0)
+		c = smoothstep(0.30, 0.78, c)
+		if rng.randf() > 0.12 + c * 0.95:
+			continue
 		var res: Variant = sampler.call(x, z)
 		if res == null:
 			continue
 		var pos: Vector3 = res
 		if pos.y <= -9000.0:
 			continue
-		var s := rng.randf_range(scale_range.x, scale_range.y)
-		var b := Basis(Vector3.UP, rng.randf_range(0.0, TAU)).scaled(Vector3(s, s, s))
+		var s := rng.randf_range(scale_range.x, scale_range.y) * lerpf(0.72, 1.12, c)
+		# Lean each plant off vertical. A field of perfectly upright clones is
+		# the other half of why scattered vegetation reads as instanced.
+		var lean := rng.randf_range(0.0, 0.16)
+		var lean_dir := rng.randf_range(0.0, TAU)
+		var b := Basis(Vector3.UP, rng.randf_range(0.0, TAU))
+		b = Basis(Vector3(cos(lean_dir), 0.0, sin(lean_dir)), lean) * b
+		b = b.scaled(Vector3(s, s * rng.randf_range(0.88, 1.15), s))
 		mm.set_instance_transform(placed, Transform3D(b, pos))
 		placed += 1
 	mm.visible_instance_count = placed

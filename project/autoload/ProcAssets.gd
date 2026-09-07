@@ -161,11 +161,18 @@ func _tri(m: StandardMaterial3D, scale: float) -> StandardMaterial3D:
 func _depth(m: StandardMaterial3D, scale: float = 0.035, layers: int = 10) -> StandardMaterial3D:
 	if m.normal_texture == null:
 		return m
-	# These are all triplanar materials, so every parallax step costs three
-	# texture samples rather than one. Measured, it was the most expensive thing
-	# in the frame by a wide margin, and the target hardware includes integrated
-	# GPUs -- so it is a High-and-above feature, off below that. Materials are
-	# cached, so this is read once per material.
+	# Godot does not support height mapping on triplanar materials at all -- it
+	# drops it and logs a warning per material. Every caller here is triplanar,
+	# so the parallax was doing nothing but filling the log. Deepen the normal
+	# instead, which is the part of the effect triplanar can actually render.
+	if m.uv1_triplanar:
+		m.normal_enabled = true
+		m.normal_scale = minf(m.normal_scale * 1.45, 3.0)
+		return m
+	# These parallax steps cost three texture samples rather than one. Measured,
+	# it was the most expensive thing in the frame by a wide margin, and the
+	# target hardware includes integrated GPUs -- so it is a High-and-above
+	# feature, off below that. Materials are cached, so this is read once.
 	var q := float(Settings.preset_data().get("parallax", 0.0))
 	if q <= 0.01:
 		return m
@@ -542,20 +549,110 @@ func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3,
 	_tri3(st, a, b, c, Vector2(0, 0), Vector2(w, 0), Vector2(w, h))
 	_tri3(st, a, c, d, Vector2(0, 0), Vector2(w, h), Vector2(0, h))
 
-## Axis-aligned box under an arbitrary transform. Winding = outward.
-func _box(st: SurfaceTool, xf: Transform3D, size: Vector3, uv_scale: float = 1.0) -> void:
+## A triangle whose winding is forced to face `out`. Chamfer geometry has eight
+## corner cases whose orientation is easy to get subtly wrong; deriving the
+## winding from the direction the surface should face gets it right every time.
+func _tri_out(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, out: Vector3,
+		ua := Vector2.ZERO, ub := Vector2.RIGHT, uc := Vector2.DOWN) -> void:
+	if (b - a).cross(c - a).dot(out) >= 0.0:
+		_tri3(st, a, b, c, ua, ub, uc)
+	else:
+		_tri3(st, a, c, b, ua, uc, ub)
+
+func _quad_out(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3,
+		out: Vector3, uv_scale: float = 1.0) -> void:
+	var w := (b - a).length() * uv_scale
+	var hgt := (d - a).length() * uv_scale
+	_tri_out(st, a, b, c, out, Vector2(0, 0), Vector2(w, 0), Vector2(w, hgt))
+	_tri_out(st, a, c, d, out, Vector2(0, 0), Vector2(w, hgt), Vector2(0, hgt))
+
+## Axis-aligned chamfered box under an arbitrary transform. Winding = outward.
+##
+## The chamfer is the point. A perfect 90-degree edge is the single clearest
+## tell that a shape came out of a primitive generator rather than out of a
+## world: nothing built, cast, cut or weathered has one, and the thin highlight
+## along a real edge is most of what the eye uses to read an object's form.
+## Every wall, floor, lintel, truss member and stair tread in the game goes
+## through here, so this one change reshapes the built world.
+func _box(st: SurfaceTool, xf: Transform3D, size: Vector3, uv_scale: float = 1.0,
+		chamfer: float = -1.0) -> void:
 	var h := size * 0.5
-	var p := [
-		xf * Vector3(-h.x, -h.y, -h.z), xf * Vector3(h.x, -h.y, -h.z),
-		xf * Vector3(h.x, -h.y, h.z), xf * Vector3(-h.x, -h.y, h.z),
-		xf * Vector3(-h.x, h.y, -h.z), xf * Vector3(h.x, h.y, -h.z),
-		xf * Vector3(h.x, h.y, h.z), xf * Vector3(-h.x, h.y, h.z)]
-	_quad(st, p[7], p[6], p[5], p[4], uv_scale)   # top
-	_quad(st, p[0], p[1], p[2], p[3], uv_scale)   # bottom
-	_quad(st, p[3], p[2], p[6], p[7], uv_scale)   # +z
-	_quad(st, p[1], p[0], p[4], p[5], uv_scale)   # -z
-	_quad(st, p[2], p[1], p[5], p[6], uv_scale)   # +x
-	_quad(st, p[0], p[3], p[7], p[4], uv_scale)   # -x
+	var small: float = minf(minf(size.x, size.y), size.z)
+	var c: float = clampf(small * 0.06, 0.006, 0.05) if chamfer < 0.0 else chamfer
+	c = minf(c, small * 0.3)
+	# Below a couple of centimetres the chamfer is not worth the triangles.
+	if c < 0.004:
+		var p := [
+			xf * Vector3(-h.x, -h.y, -h.z), xf * Vector3(h.x, -h.y, -h.z),
+			xf * Vector3(h.x, -h.y, h.z), xf * Vector3(-h.x, -h.y, h.z),
+			xf * Vector3(-h.x, h.y, -h.z), xf * Vector3(h.x, h.y, -h.z),
+			xf * Vector3(h.x, h.y, h.z), xf * Vector3(-h.x, h.y, h.z)]
+		_quad(st, p[7], p[6], p[5], p[4], uv_scale)   # top
+		_quad(st, p[0], p[1], p[2], p[3], uv_scale)   # bottom
+		_quad(st, p[3], p[2], p[6], p[7], uv_scale)   # +z
+		_quad(st, p[1], p[0], p[4], p[5], uv_scale)   # -z
+		_quad(st, p[2], p[1], p[5], p[6], uv_scale)   # +x
+		_quad(st, p[0], p[3], p[7], p[4], uv_scale)   # -x
+		return
+
+	var hs := [h.x, h.y, h.z]
+	# A vertex of the chamfered box: `full` names the axis held at its full
+	# half-extent, the other two are inset by the chamfer.
+	var vert := func(sx: float, sy: float, sz: float, full: int) -> Vector3:
+		var sg := [sx, sy, sz]
+		var v := Vector3.ZERO
+		for a in 3:
+			v[a] = sg[a] * (hs[a] if a == full else hs[a] - c)
+		return v
+	var dirv := func(sx: float, sy: float, sz: float) -> Vector3:
+		return (xf.basis * Vector3(sx, sy, sz)).normalized()
+
+	# Six inset faces.
+	for axis in 3:
+		for sgn in [-1.0, 1.0]:
+			var ua := (axis + 1) % 3
+			var va := (axis + 2) % 3
+			var quad: Array = []
+			for corner in [[-1.0, -1.0], [1.0, -1.0], [1.0, 1.0], [-1.0, 1.0]]:
+				var sg := [0.0, 0.0, 0.0]
+				sg[axis] = sgn
+				sg[ua] = corner[0]
+				sg[va] = corner[1]
+				quad.append(xf * vert.call(sg[0], sg[1], sg[2], axis))
+			var nrm := [0.0, 0.0, 0.0]
+			nrm[axis] = sgn
+			_quad_out(st, quad[0], quad[1], quad[2], quad[3],
+				dirv.call(nrm[0], nrm[1], nrm[2]), uv_scale)
+
+	# Twelve edge chamfers: two axes pinned to a sign, the third spanning.
+	for a in 3:
+		for b in range(a + 1, 3):
+			var free_axis: int = 3 - a - b
+			for sa in [-1.0, 1.0]:
+				for sb in [-1.0, 1.0]:
+					var ends: Array = []
+					for sf in [-1.0, 1.0]:
+						var sg := [0.0, 0.0, 0.0]
+						sg[a] = sa
+						sg[b] = sb
+						sg[free_axis] = sf
+						ends.append([xf * vert.call(sg[0], sg[1], sg[2], a),
+							xf * vert.call(sg[0], sg[1], sg[2], b)])
+					var nrm := [0.0, 0.0, 0.0]
+					nrm[a] = sa
+					nrm[b] = sb
+					_quad_out(st, ends[0][0], ends[0][1], ends[1][1], ends[1][0],
+						dirv.call(nrm[0], nrm[1], nrm[2]), uv_scale)
+
+	# Eight corner triangles closing the three chamfers that meet there.
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				_tri_out(st,
+					xf * vert.call(sx, sy, sz, 0),
+					xf * vert.call(sx, sy, sz, 1),
+					xf * vert.call(sx, sy, sz, 2),
+					dirv.call(sx, sy, sz))
 
 func _commit(st: SurfaceTool, smooth: bool = false) -> ArrayMesh:
 	if smooth:
@@ -949,6 +1046,139 @@ func cylinder_mesh(radius: float, height: float, sides: int = 14, caps: bool = t
 				_tri3(st, Vector3(0, -hy, 0), p1, p0)
 		return _commit(st, true))
 
+## A machine limb segment: a tapered, faceted tube with a swollen joint at each
+## end. Box legs are the loudest "this is a prototype" signal a walker can send,
+## because a real actuated limb is never a constant-section stick -- it is thick
+## at the joints, where the bearing and the housing live, and thin along the
+## span, where only the load matters.
+func limb_mesh(length: float, top_radius: float, bottom_radius: float,
+		sides: int = 10, joint: float = 1.55) -> Mesh:
+	var key := "limb_%.3f_%.3f_%.3f_%d_%.2f" % [length, top_radius, bottom_radius,
+		sides, joint]
+	return _cached(key, func() -> Mesh:
+		var st := _st()
+		var n: int = maxi(5, sides)
+		# Profile down the limb: fraction of length, radius multiplier. The
+		# bulges at 0 and 1 are the joint housings.
+		var profile := [
+			[0.00, joint * 0.86], [0.07, joint], [0.16, 1.0],
+			[0.50, 0.88], [0.84, 1.0], [0.93, joint], [1.00, joint * 0.86],
+		]
+		var radius_at := func(t: float) -> float:
+			return lerpf(top_radius, bottom_radius, t)
+		var ring := func(idx: int) -> Array:
+			var e: Array = profile[idx]
+			var t: float = float(e[0])
+			var rad: float = radius_at.call(t) * float(e[1])
+			var y := -length * t
+			var pts: Array = []
+			for i in n:
+				var a := TAU * float(i) / float(n)
+				# Slight ellipticity so the limb has a front and a side rather
+				# than reading as a lathe-turned dowel.
+				pts.append(Vector3(cos(a) * rad, y, sin(a) * rad * 0.78))
+			return pts
+		for k in range(profile.size() - 1):
+			var r0: Array = ring.call(k)
+			var r1: Array = ring.call(k + 1)
+			var v0: float = float(profile[k][0])
+			var v1: float = float(profile[k + 1][0])
+			for i in n:
+				var j := (i + 1) % n
+				var u0 := float(i) / float(n)
+				var u1 := float(i + 1) / float(n)
+				_tri3(st, r0[i], r0[j], r1[j],
+					Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1))
+				_tri3(st, r0[i], r1[j], r1[i],
+					Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1))
+		# Cap both ends so the limb is closed where it meets its joint.
+		var top: Array = ring.call(0)
+		var bot: Array = ring.call(profile.size() - 1)
+		for i in n:
+			var j := (i + 1) % n
+			_tri3(st, Vector3(0, 0, 0), top[j], top[i])
+			_tri3(st, Vector3(0, -length, 0), bot[i], bot[j])
+		return _commit(st, true))
+
+## A small boat hull: tapered bow, chined sides, flat deck, squared stern.
+##
+## The survey skiff the game opens on was a 4x8 metre cuboid, and it is the
+## first object the player ever stands on. A hull is defined by its curves --
+## the taper toward the bow, the chine where topside meets bottom, the sheer
+## rising forward -- and none of those survive being a box.
+func hull_mesh(length: float, beam: float, depth: float, sections: int = 16) -> Mesh:
+	var key := "hull_%.2f_%.2f_%.2f_%d" % [length, beam, depth, sections]
+	return _cached(key, func() -> Mesh:
+		var st := _st()
+		var n: int = maxi(6, sections)
+		var hb := beam * 0.5
+		var hd := depth * 0.5
+		# Cross-section as (half-width factor, height factor) pairs, keel first
+		# and up the starboard side to the deck edge.
+		var side := [
+			[0.00, -1.00],   # keel
+			[0.46, -0.86],   # turn of the bilge
+			[0.82, -0.42],   # lower chine
+			[0.97, 0.10],    # upper chine
+			[1.00, 0.72],    # deck edge
+		]
+		var loops: Array = []
+		for k in range(n + 1):
+			var t := float(k) / float(n)
+			# Beam: full through the middle, squared off aft, drawn to a stem
+			# forward. The cubic keeps the shoulders full so the taper reads as
+			# a bow rather than as a wedge.
+			var taper: float = 1.0 - pow(clampf((t - 0.45) / 0.55, 0.0, 1.0), 1.7) * 0.94
+			taper *= lerpf(0.86, 1.0, smoothstep(0.0, 0.28, t))
+			# Sheer: the deck line rises toward the bow and a little aft.
+			var sheer: float = 1.0 + pow(clampf((t - 0.5) / 0.5, 0.0, 1.0), 2.0) * 0.30 \
+				+ pow(clampf((0.28 - t) / 0.28, 0.0, 1.0), 2.0) * 0.10
+			var z := lerpf(-length * 0.5, length * 0.5, t)
+			var loop: PackedVector3Array = []
+			# Keel and starboard side, then port side mirrored back down, so the
+			# loop is closed and consistently wound.
+			for i in side.size():
+				var w: float = float(side[i][0]) * hb * taper
+				var y: float = float(side[i][1]) * hd
+				if side[i][1] > 0.0:
+					y *= sheer
+				loop.append(Vector3(w, y, z))
+			# Port side, mirrored and walked back down. The keel sits on the
+			# centreline, so it is not repeated -- the loop closes onto it.
+			for i in range(side.size() - 1, 0, -1):
+				var w2: float = -float(side[i][0]) * hb * taper
+				var y2: float = float(side[i][1]) * hd
+				if side[i][1] > 0.0:
+					y2 *= sheer
+				loop.append(Vector3(w2, y2, z))
+			loops.append(loop)
+		var m: int = loops[0].size()
+		for k in range(n):
+			var a: PackedVector3Array = loops[k]
+			var b: PackedVector3Array = loops[k + 1]
+			for i in m:
+				var j := (i + 1) % m
+				var v0: float = float(k) / float(n) * length
+				var v1: float = float(k + 1) / float(n) * length
+				var u0 := float(i) / float(m) * beam * 2.0
+				var u1 := float(i + 1) / float(m) * beam * 2.0
+				_tri_out(st, a[i], a[j], b[j], (a[i] + a[j] + b[j]) / 3.0 * Vector3(1, 1, 0),
+					Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1))
+				_tri_out(st, a[i], b[j], b[i], (a[i] + b[j] + b[i]) / 3.0 * Vector3(1, 1, 0),
+					Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1))
+		# Transom and stem caps.
+		for pair in [[loops[0], Vector3(0, 0, -1)], [loops[n], Vector3(0, 0, 1)]]:
+			var loop: PackedVector3Array = pair[0]
+			var out: Vector3 = pair[1]
+			var mid := Vector3.ZERO
+			for v in loop:
+				mid += v
+			mid /= float(loop.size())
+			for i in loop.size():
+				var j := (i + 1) % loop.size()
+				_tri_out(st, mid, loop[i], loop[j], out)
+		return _commit(st, true))
+
 ## Grass / reed blade cluster used by MultiMeshInstance3D vegetation.
 func blade_cluster_mesh(seed_v: int, blades: int = 5, height: float = 0.6,
 		width: float = 0.06) -> Mesh:
@@ -993,12 +1223,127 @@ func plane_mesh(size: Vector2, subdiv: int = 1) -> Mesh:
 					Vector2(0, 0), Vector2(1, 1), Vector2(1, 0))
 		return _commit(st, false))
 
-func box_mesh(size: Vector3, uv_scale: float = 1.0) -> Mesh:
-	var key := "box_%.2f_%.2f_%.2f_%.2f" % [size.x, size.y, size.z, uv_scale]
+## A built slab: bevelled, subdivided and very slightly warped.
+##
+## This replaces what used to be a mathematically perfect cuboid, and it is the
+## single largest visual change in the game, because almost every constructed
+## thing in every chapter goes through here -- walls, crates, platforms, hulls,
+## lintels. A perfect box gives itself away in two ways that no amount of
+## texture work can hide:
+##
+##  * A razor 90-degree edge. Real edges are chipped, cast, poured or milled,
+##    and all of those leave a chamfer that catches a highlight. That thin line
+##    of light along every edge is most of what the eye reads as "an object"
+##    rather than "a primitive".
+##  * A perfectly flat face. Four coplanar vertices shade as one dead-flat
+##    gradient, so a large wall reads as painted cardboard however good the
+##    material is.
+##
+## So the box is generated as a rounded box: a subdivided cube projected onto a
+## rounded-box surface, then displaced along its normal by a little noise. The
+## result stays strictly inside the nominal size, which matters because callers
+## pair this mesh with a BoxShape3D of exactly that size -- the collider may be
+## a hair larger than the visual, never smaller.
+func box_mesh(size: Vector3, uv_scale: float = 1.0, wear: float = 1.0,
+		seed_v: int = 0) -> Mesh:
+	var key := "box_%.2f_%.2f_%.2f_%.2f_%.2f_%d" % [size.x, size.y, size.z,
+		uv_scale, wear, seed_v]
 	return _cached(key, func() -> Mesh:
+		var h := size * 0.5
+		var small: float = minf(minf(size.x, size.y), size.z)
+		# The bevel has to stay small relative to the thinnest axis or a slab
+		# turns into a pillow.
+		var r: float = clampf(small * 0.075, 0.008, 0.075) * clampf(wear, 0.0, 2.0)
+		r = minf(r, small * 0.24)
+		var amp: float = minf(small * 0.012, 0.010) * clampf(wear, 0.0, 2.0)
+		var inner := Vector3(maxf(h.x - r, 0.0), maxf(h.y - r, 0.0), maxf(h.z - r, 0.0))
 		var st := _st()
-		_box(st, Transform3D(), size, uv_scale)
-		return _commit(st, false))
+		# Sample positions along an axis: the box edge, two steps through the
+		# chamfer, then the flat interior. The chamfer boundary has to be an
+		# explicit sample -- on a plain uniform grid a coarse face has no vertex
+		# where the bevel starts, and the whole face collapses into a pyramid.
+		var axis_coords := func(half: float, inner_half: float) -> Array:
+			var out: Array = []
+			out.append(-half)
+			if inner_half < half - 1e-6:
+				out.append(-lerpf(inner_half, half, 0.55))
+				out.append(-inner_half)
+			var span := inner_half * 2.0
+			var steps: int = clampi(int(ceil(span / 0.7)), 1, 10)
+			for k in range(1, steps):
+				out.append(lerpf(-inner_half, inner_half, float(k) / float(steps)))
+			if inner_half < half - 1e-6:
+				out.append(inner_half)
+				out.append(lerpf(inner_half, half, 0.55))
+			out.append(half)
+			return out
+		var coords := [axis_coords.call(h.x, inner.x), axis_coords.call(h.y, inner.y),
+			axis_coords.call(h.z, inner.z)]
+		# Project a point on the nominal box onto the rounded-box surface, then
+		# push it in or out slightly. Exact rounded-box mapping: clamp to the
+		# inner core, then step out by the bevel radius along the offset.
+		var surf := func(p: Vector3) -> Vector3:
+			var q := Vector3(clampf(p.x, -inner.x, inner.x),
+				clampf(p.y, -inner.y, inner.y), clampf(p.z, -inner.z, inner.z))
+			var d := p - q
+			if d.length_squared() < 1e-10:
+				return q
+			var nrm := d.normalized()
+			var v := q + nrm * r
+			if amp > 0.0:
+				# Cheap deterministic value noise: enough to break the plane,
+				# not enough to move the surface off its collider.
+				var w := sin(v.x * 5.7 + float(seed_v) * 1.3) \
+					* sin(v.y * 6.9 + 1.7 + float(seed_v) * 0.7) \
+					* sin(v.z * 6.1 + 3.1 + float(seed_v) * 2.1)
+				var w2 := sin(v.x * 17.3 + 0.4) * sin(v.y * 15.1 + 2.2) * sin(v.z * 19.7 + 5.0)
+				# Biased so the displacement is never positive. Callers pair this
+				# mesh with a BoxShape3D of the nominal size, and a surface that
+				# bulges past its own collider lets the player stand inside the
+				# visible geometry. Weathering takes material away in any case.
+				v += nrm * (w * amp + w2 * amp * 0.35 - amp * 1.35)
+			return v
+		# Six faces, each a grid over those coordinates. Axis: 0=x, 1=y, 2=z.
+		var hs := [h.x, h.y, h.z]
+		for axis in 3:
+			var ua := (axis + 1) % 3
+			var va := (axis + 2) % 3
+			# (ua, va, axis) is right-handed for every cyclic choice, so the
+			# positive face keeps its winding and only the negative one flips.
+			var cu: Array = coords[ua]
+			var cv: Array = coords[va]
+			for sgn in [-1.0, 1.0]:
+				for i in range(cu.size() - 1):
+					for j in range(cv.size() - 1):
+						var at := func(di: int, dj: int) -> Vector3:
+							var p := Vector3.ZERO
+							p[axis] = sgn * hs[axis]
+							p[ua] = cu[i + di]
+							p[va] = cv[j + dj]
+							return surf.call(p)
+						# Explicit types: Callable.call() returns Variant, and
+						# this project treats an inferred Variant as an error.
+						var p00: Vector3 = at.call(0, 0)
+						var p10: Vector3 = at.call(1, 0)
+						var p11: Vector3 = at.call(1, 1)
+						var p01: Vector3 = at.call(0, 1)
+						var u0: float = (float(cu[i]) + hs[ua]) * uv_scale
+						var u1: float = (float(cu[i + 1]) + hs[ua]) * uv_scale
+						var v0: float = (float(cv[j]) + hs[va]) * uv_scale
+						var v1: float = (float(cv[j + 1]) + hs[va]) * uv_scale
+						if sgn > 0.0:
+							_tri3(st, p00, p10, p11,
+								Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1))
+							_tri3(st, p00, p11, p01,
+								Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1))
+						else:
+							_tri3(st, p00, p11, p10,
+								Vector2(u0, v0), Vector2(u1, v1), Vector2(u1, v0))
+							_tri3(st, p00, p01, p11,
+								Vector2(u0, v0), Vector2(u0, v1), Vector2(u1, v1))
+		# Smooth normals: the bevel needs them, and a flat face's vertices are
+		# still coplanar so its shading is unchanged.
+		return _commit(st, true))
 
 func sphere_mesh(radius: float, rings: int = 12, segs: int = 18) -> Mesh:
 	return rock_mesh(0, radius, 0.0, rings, segs, 1.0)
