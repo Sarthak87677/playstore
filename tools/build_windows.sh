@@ -7,8 +7,17 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GODOT="${GODOT:-godot}"
-OUT_DIR="$ROOT/release/VEILFORGE"
-ZIP_PATH="$ROOT/release/VEILFORGE-Windows-x86_64.zip"
+# Everything the player sees carries the build number: the folder, the
+# executable, the zip, and the window title. Three separate rounds of "it still
+# does X" turned out to be an older executable still sitting in the download
+# folder, with no way for either side to tell from a screenshot which build was
+# running. A versioned name cannot be extracted over the previous one, and
+# cannot be confused with it in a file listing.
+VERSION="$(sed -n 's/^config\/version="\(.*\)"/\1/p' "$ROOT/project/project.godot" | head -1)"
+VERSION="${VERSION:-0}"
+OUT_DIR="$ROOT/release/VEILFORGE-v$VERSION"
+EXE_NAME="VEILFORGE-v$VERSION.exe"
+ZIP_PATH="$ROOT/release/VEILFORGE-v$VERSION-Windows-x86_64.zip"
 
 if ! command -v "$GODOT" >/dev/null 2>&1; then
   echo "error: '$GODOT' not found. Install Godot 4.3 or set GODOT=/path/to/godot" >&2
@@ -87,9 +96,9 @@ echo "==> Exporting Windows x86-64"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 "$GODOT" --headless --path "$ROOT/project" \
-    --export-release "Windows Desktop" "../release/VEILFORGE/VEILFORGE.exe"
+    --export-release "Windows Desktop" "$OUT_DIR/$EXE_NAME"
 
-if [ ! -f "$OUT_DIR/VEILFORGE.exe" ]; then
+if [ ! -f "$OUT_DIR/$EXE_NAME" ]; then
   echo "error: export produced no executable" >&2
   exit 1
 fi
@@ -100,9 +109,16 @@ cp "$ROOT/README.md" "$ROOT/CONTROLS.md" "$ROOT/THIRD_PARTY_LICENSES.md" \
 
 echo "==> Packaging $ZIP_PATH"
 rm -f "$ZIP_PATH"
-( cd "$ROOT/release" && zip -q -r "$(basename "$ZIP_PATH")" VEILFORGE )
+( cd "$ROOT/release" && zip -q -r "$(basename "$ZIP_PATH")" "$(basename "$OUT_DIR")" )
+# `zip` failing inside a subshell does not trip `set -e` in every shell, and a
+# build that reports success without producing an archive is worse than one
+# that fails, so check the artifact itself.
+if [ ! -f "$ZIP_PATH" ]; then
+  echo "error: packaging produced no archive at $ZIP_PATH" >&2
+  exit 1
+fi
 
 echo
-echo "Executable : $OUT_DIR/VEILFORGE.exe"
+echo "Executable : $OUT_DIR/$EXE_NAME"
 echo "Archive    : $ZIP_PATH"
-ls -lh "$OUT_DIR/VEILFORGE.exe" "$ZIP_PATH" | awk '{print "  " $5 "\t" $9}'
+ls -lh "$OUT_DIR/$EXE_NAME" "$ZIP_PATH" | awk '{print "  " $5 "\t" $9}'

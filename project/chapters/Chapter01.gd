@@ -163,6 +163,23 @@ func _build_start() -> void:
 	scannable(base + Vector3(9.0, 1.6, 5.0), "Survey Skiff GR-04",
 		"Impact damage on the port side. The log ends mid-sentence.", Veil.Prop.RIGID, -1, 2.6)
 
+	# The crew. MOTE has been talking about them since the first line and they
+	# were never there; a valley with a wrecked skiff and no people in it reads
+	# as a diorama. They are in the opening shot on purpose -- a human figure is
+	# the one object every viewer can judge for scale and proportion, so it does
+	# more for whether a place looks real than any amount of surface detail.
+	# Placed in open ground in the opening shot, clear of the mast, so the first
+	# thing on screen has a person in it for scale.
+	var vane := on_ground(3.6, 59.4)
+	human(vane, -0.6, "stand", 1.79, Color(0.31, 0.36, 0.40), 1)
+	human(on_ground(7.4, 65.4) + Vector3(0, 0.30, 0), -1.2, "sit", 1.70,
+		Color(0.42, 0.34, 0.27), 2)
+	human(on_ground(11.2, 68.6), 2.1, "slump", 1.75, Color(0.26, 0.29, 0.33), 3)
+
+	scannable(vane + Vector3(0, 1.3, 0), "Surveyor Idris Vane",
+		"Standing exactly where the log says she was standing. She has not moved since.",
+		Veil.Prop.NONE, -1, 2.2)
+
 	# The device itself.
 	var plinth := box(Vector3(1.2, 1.0, 1.2), "concrete", base + Vector3(0, 0.5, 0),
 		Vector3.ZERO, Veil.Surface.STONE)

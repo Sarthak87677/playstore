@@ -383,6 +383,37 @@ func _build_mat(name: String) -> StandardMaterial3D:
 			m.normal_texture = normal_tex("bark_a", 151, 0.03, 14.0, 5)
 			m.normal_scale = 1.6
 			return _tri(m, 0.5)
+		# ---------------------------------------------------------- people
+		"skin":
+			# Skin is not a plastic: it is rough at a scale you cannot see, it
+			# scatters light through the thin parts, and its specular is weak and
+			# broad. Getting those three wrong is most of what makes a CG person
+			# look like a mannequin.
+			var m := _base(Color(0.78, 0.62, 0.53), 0.52, 0.0)
+			m.normal_enabled = true
+			m.normal_texture = normal_tex("skin_n", 501, 0.32, 1.6, 3, TEX_SIZE_SMALL)
+			m.normal_scale = 0.30
+			m.specular = 0.28
+			m.backlight_enabled = true
+			m.backlight = Color(0.24, 0.09, 0.07)
+			m.roughness_texture = noise_tex("skin_r", 502, 0.10, [
+				[0.0, Color(0.82, 0.82, 0.82)], [1.0, Color(1.0, 1.0, 1.0)]], 3,
+				TEX_SIZE_SMALL)
+			return m
+		"cloth":
+			var m := _base(Color(0.70, 0.72, 0.75), 0.92, 0.0)
+			m.albedo_texture = noise_tex("cloth_a", 511, 0.09, [
+				[0.0, Color(0.62, 0.62, 0.64)], [0.5, Color(0.82, 0.82, 0.84)],
+				[1.0, Color(0.96, 0.96, 0.97)]], 4)
+			m.normal_enabled = true
+			m.normal_texture = normal_tex("cloth_n", 512, 0.22, 3.2, 3)
+			m.normal_scale = 0.85
+			m.specular = 0.14
+			m.ao_enabled = true
+			m.ao_texture = noise_tex("cloth_ao", 513, 0.05, [
+				[0.0, Color(0.70, 0.70, 0.70)], [0.65, Color(1, 1, 1)],
+				[1.0, Color(1, 1, 1)]], 3)
+			return m
 		"resin":
 			var m := _base(Color(0.58, 0.44, 0.22, 0.86), 0.18, 0.0)
 			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -1199,6 +1230,110 @@ func hull_mesh(length: float, beam: float, depth: float, sections: int = 16) -> 
 			for i in loop.size():
 				var j := (i + 1) % loop.size()
 				_tri_out(st, mid, loop[i], loop[j], out)
+		return _commit(st, true))
+
+## A lofted torso: hips, waist, ribcage, chest, shoulders.
+##
+## Built the way the hull is, from elliptical cross-sections stacked up the body
+## and skinned between, because a torso is defined by how its width and depth
+## change with height -- narrow and deep at the waist, wide and shallow across
+## the shoulders. A capsule or a box gets none of that and reads instantly as a
+## placeholder.
+func body_mesh(height: float, width: float, depth: float, segs: int = 12) -> Mesh:
+	var key := "body_%.2f_%.2f_%.2f_%d" % [height, width, depth, segs]
+	return _cached(key, func() -> Mesh:
+		var st := _st()
+		var n: int = maxi(8, segs)
+		var ring: int = 12
+		# t from hips (0) to the base of the neck (1): half-width, half-depth.
+		var profile := [
+			[0.00, 0.92, 0.86], [0.10, 0.98, 0.90], [0.24, 0.86, 0.76],
+			[0.38, 0.80, 0.72], [0.52, 0.88, 0.80], [0.68, 1.00, 0.88],
+			[0.82, 1.00, 0.86], [0.92, 0.84, 0.72], [1.00, 0.52, 0.50],
+		]
+		var sample := func(t: float) -> Vector3:
+			# Piecewise-linear through the profile, so the shape is exactly the
+			# table above rather than a curve that smooths the waist away.
+			var i := 0
+			while i < profile.size() - 2 and float(profile[i + 1][0]) < t:
+				i += 1
+			var a: Array = profile[i]
+			var b: Array = profile[i + 1]
+			var span: float = maxf(float(b[0]) - float(a[0]), 1e-5)
+			var k: float = clampf((t - float(a[0])) / span, 0.0, 1.0)
+			return Vector3(lerpf(float(a[1]), float(b[1]), k) * width * 0.5,
+				t * height, lerpf(float(a[2]), float(b[2]), k) * depth * 0.5)
+		var loops: Array = []
+		for i in range(n + 1):
+			var t := float(i) / float(n)
+			var d := sample.call(t) as Vector3
+			var loop: PackedVector3Array = []
+			for j in ring:
+				var a := TAU * float(j) / float(ring)
+				# Flatten the back slightly: a person is not an extruded ellipse.
+				var z := sin(a) * d.z * (1.0 if sin(a) > 0.0 else 0.86)
+				loop.append(Vector3(cos(a) * d.x, d.y, z))
+			loops.append(loop)
+		for i in n:
+			var a: PackedVector3Array = loops[i]
+			var b: PackedVector3Array = loops[i + 1]
+			for j in ring:
+				var k := (j + 1) % ring
+				var v0 := float(i) / float(n)
+				var v1 := float(i + 1) / float(n)
+				var u0 := float(j) / float(ring)
+				var u1 := float(j + 1) / float(ring)
+				var out0 := Vector3(a[j].x, 0.0, a[j].z)
+				_tri_out(st, a[j], a[k], b[k], out0,
+					Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1))
+				_tri_out(st, a[j], b[k], b[j], out0,
+					Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1))
+		# Close the hips and the neck opening.
+		for pair in [[loops[0], Vector3.DOWN], [loops[n], Vector3.UP]]:
+			var loop: PackedVector3Array = pair[0]
+			var out: Vector3 = pair[1]
+			var mid := Vector3.ZERO
+			for v in loop:
+				mid += v
+			mid /= float(loop.size())
+			for j in loop.size():
+				var k2 := (j + 1) % loop.size()
+				_tri_out(st, mid, loop[j], loop[k2], out)
+		return _commit(st, true))
+
+## A head: an ellipsoid narrowed at the jaw and flattened at the back.
+func head_mesh(radius: float, rings: int = 10, segs: int = 14) -> Mesh:
+	var key := "head_%.3f_%d_%d" % [radius, rings, segs]
+	return _cached(key, func() -> Mesh:
+		var st := _st()
+		var nr: int = maxi(6, rings)
+		var ns: int = maxi(8, segs)
+		var at := func(i: int, j: int) -> Vector3:
+			var v := PI * float(i) / float(nr)          # 0 = crown, PI = chin
+			var u := TAU * float(j) / float(ns)
+			var y := cos(v)
+			var r := sin(v)
+			# Taper toward the chin and swell slightly at the cranium.
+			var jaw: float = lerpf(0.62, 1.0, smoothstep(0.0, 0.55, 1.0 - (y * 0.5 + 0.5)))
+			var w: float = r * lerpf(jaw, 1.0, clampf(y * 0.5 + 0.5, 0.0, 1.0))
+			var z := sin(u) * w
+			if sin(u) < 0.0:
+				z *= 0.88                                # flatter at the back
+			return Vector3(cos(u) * w * 0.86, y * 1.18, z) * radius
+		for i in nr:
+			for j in ns:
+				var p00: Vector3 = at.call(i, j)
+				var p10: Vector3 = at.call(i + 1, j)
+				var p11: Vector3 = at.call(i + 1, (j + 1) % ns)
+				var p01: Vector3 = at.call(i, (j + 1) % ns)
+				var u0 := float(j) / float(ns)
+				var u1 := float(j + 1) / float(ns)
+				var v0 := float(i) / float(nr)
+				var v1 := float(i + 1) / float(nr)
+				_tri_out(st, p00, p10, p11, p00.normalized(),
+					Vector2(u0, v0), Vector2(u0, v1), Vector2(u1, v1))
+				_tri_out(st, p00, p11, p01, p00.normalized(),
+					Vector2(u0, v0), Vector2(u1, v1), Vector2(u1, v0))
 		return _commit(st, true))
 
 ## Grass / reed blade cluster used by MultiMeshInstance3D vegetation.

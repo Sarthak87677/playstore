@@ -140,6 +140,20 @@ albedo and emission budget by the number of layers a ray will cross, and
 The lesson generalises: for additive geometry the question is never "is this
 surface under 1.0", it is "what is the sum along the ray".
 
+## 7b. The human figures are figures, not characters
+
+Chapter 1 now has survey crew standing, sitting and slumped where the story
+left them, built from the same procedural generators as everything else:
+a lofted torso whose width and depth change with height, a head with a jaw and
+a flattened back, jointed arms and legs, hair, and enough breathing and weight
+shift that they do not read as statues.
+
+What they are not: they have no faces, no hands beyond a shaped mass, no walk
+cycle, and no skeletal rig -- they are posed by rotating joint nodes, not
+skinned to bones. They are set dressing that gives the world human scale, which
+is what it was missing, and they should be read as that rather than as
+characters.
+
 ## 7a. Smaller known issues
 
 * **Guardian navigation is a steering behaviour, not a navmesh.** Guardians

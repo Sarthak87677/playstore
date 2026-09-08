@@ -259,6 +259,21 @@ func decor(mesh: Mesh, mat: Variant, pos: Vector3, rot: Vector3 = Vector3.ZERO,
 
 ## Rocks reuse a small pool of base meshes and vary by scale and rotation, so
 ## meshes and their convex collision shapes stay cached instead of unique.
+## A person. Placed where the story left them, not as an enemy or a quest giver.
+func human(pos: Vector3, yaw: float = 0.0, p_pose: String = "stand",
+		p_height: float = 1.78, cloth: Color = Color(0.30, 0.33, 0.36),
+		p_seed: int = 0, parent: Node = null) -> Human:
+	var h := Human.new()
+	h.height = p_height
+	h.pose = p_pose
+	h.cloth = cloth
+	h.seed_v = p_seed
+	h.build = 0.9 + float(p_seed % 5) * 0.06
+	h.position = pos
+	h.rotation.y = yaw
+	(parent if parent else self).add_child(h)
+	return h
+
 func rock(pos: Vector3, size: float, seed_v: int = -1, mat: String = "rock",
 		parent: Node = null) -> StaticBody3D:
 	var s := (seed_v if seed_v >= 0 else rng.randi_range(1, 9999)) % 10

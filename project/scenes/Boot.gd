@@ -12,12 +12,26 @@ var _status: Label
 
 func _ready() -> void:
 	Log.info("Boot: %s" % ProjectSettings.get_setting("application/config/name"))
+	_stamp_window_title()
 	var args := OS.get_cmdline_user_args()
 	if "--autotest" in args:
 		_start_autotest(args)
 		return
 	_build()
 	_run()
+
+## Put the build number in the title bar.
+##
+## Not decoration. Three separate rounds of "it still does X" turned out to be
+## an older executable still sitting in the download folder, and neither of us
+## could tell from a screenshot which build was running. The title bar is in
+## every screenshot, so now it always answers that.
+func _stamp_window_title() -> void:
+	var name_s := str(ProjectSettings.get_setting("application/config/name", "VEILFORGE"))
+	var ver := str(ProjectSettings.get_setting("application/config/version", "0"))
+	var title := "%s  -  build %s" % [name_s, ver]
+	DisplayServer.window_set_title(title)
+	Log.info("Build %s" % ver)
 
 ## Development-only entry point. Never reachable without the command-line flag,
 ## so shipped builds expose no debug tooling to players.
